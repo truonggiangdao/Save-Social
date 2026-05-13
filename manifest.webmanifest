@@ -1,0 +1,23 @@
+{
+  "name": "Save Social",
+  "short_name": "Save Social",
+  "description": "Lưu link video và web, phân loại theo thẻ — chạy offline trên máy bạn.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#eef0f4",
+  "theme_color": "#0b84c4",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
