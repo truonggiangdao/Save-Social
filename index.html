@@ -121,9 +121,42 @@
     <nav class="app-menu__drawer" id="appMenuPanel" aria-label="Menu ứng dụng">
       <div class="app-menu__head">
         <span class="app-menu__title">Save Social</span>
-        <button type="button" class="icon-btn app-menu__close" id="appMenuClose" aria-label="Đóng menu">×</button>
+        <div class="app-menu__head-tools">
+          <button
+            type="button"
+            id="btnOpenTheme"
+            class="toolbar__icon-btn app-menu__gear"
+            title="Màu & giao diện"
+            aria-label="Màu & giao diện"
+            aria-controls="appMenuThemeBody"
+            aria-expanded="false"
+          >
+            <svg class="toolbar__svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+              <path
+                d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96c-.5-.38-1.04-.7-1.62-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.58.24-1.12.56-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.74 8.84c-.13.22-.08.5.12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.25.44.33.7.22l2.39-.96c.5.38 1.04.7 1.62.94l.36 2.54c.05.24.27.42.49.42h3.84c.22 0 .44-.18.49-.42l.36-2.54c.58-.24 1.12-.56 1.62-.94l2.39.96c.26.11.56.03.7-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 15.6 12 3.6 3.6 0 0 1 12 15.6z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+          <button type="button" class="icon-btn app-menu__close" id="appMenuClose" aria-label="Đóng menu">×</button>
+        </div>
       </div>
-      <p class="app-menu__hint">Các mục menu sẽ được bổ sung trong phiên bản sau.</p>
+      <div id="appMenuHomeBody" class="app-menu__home">
+        <p class="app-menu__hint">Dữ liệu chỉ lưu trên thiết bị. Nhấn biểu tượng bánh răng để đổi màu chủ đạo.</p>
+      </div>
+      <div id="appMenuThemeBody" class="app-menu__theme" hidden>
+        <button type="button" class="app-menu__back" id="btnThemeBack">← Trở lại</button>
+        <p class="app-menu__theme-lead">Chọn màu chủ đạo — nút, chip và thẻ ghim sẽ theo màu này.</p>
+        <div class="theme-presets" id="themePresets" role="group" aria-label="Bảng màu có sẵn"></div>
+        <div class="theme-custom">
+          <label class="theme-custom__label" for="themeAccentPicker">Tùy chỉnh</label>
+          <div class="theme-custom__row">
+            <input type="color" id="themeAccentPicker" value="#0b84c4" aria-label="Chọn màu chủ đạo" />
+            <code class="theme-custom__hex" id="themeAccentHex">#0b84c4</code>
+          </div>
+        </div>
+        <button type="button" class="btn btn--ghost btn--sm theme-reset" id="btnThemeReset">Khôi phục mặc định</button>
+      </div>
     </nav>
   </div>
 

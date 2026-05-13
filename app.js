@@ -2,6 +2,16 @@
   "use strict";
 
   var STORAGE_KEY = "saveSocialLibrary_v1";
+  var THEME_KEY = "saveSocialTheme_v1";
+  var DEFAULT_ACCENT = "#0b84c4";
+  var THEME_PRESETS = [
+    { id: "ocean", label: "Xanh dương", hex: "#0b84c4" },
+    { id: "forest", label: "Xanh lá", hex: "#0d8a5b" },
+    { id: "violet", label: "Tím", hex: "#6d4bd6" },
+    { id: "sunset", label: "Cam", hex: "#e8652a" },
+    { id: "rose", label: "Hồng", hex: "#d9467d" },
+    { id: "slate", label: "Xám xanh", hex: "#3d5a73" },
+  ];
   var PRESET_TAGS = ["Nấu ăn", "Tập thể dục", "Con cái", "Mẹo sống"];
   var SWIPE_DELETE_W = 88;
 
@@ -24,7 +34,11 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return [];
       var data = JSON.parse(raw);
-      return Array.isArray(data.items) ? data.items : [];
+      if (!Array.isArray(data.items)) return [];
+      return data.items.map(function (it) {
+        it.pinned = !!it.pinned;
+        return it;
+      });
     } catch (e) {
       return [];
     }
@@ -36,6 +50,193 @@
     } catch (e) {
       showToast("Không lưu được — kiểm tra dung lượng hoặc chế độ riêng tư trình duyệt.");
     }
+  }
+
+  function clampByte(x) {
+    return Math.min(255, Math.max(0, Math.round(x)));
+  }
+
+  function hexToRgb(hex) {
+    var h = String(hex || "")
+      .trim()
+      .replace(/^#/, "");
+    if (h.length === 3) {
+      h = h
+        .split("")
+        .map(function (c) {
+          return c + c;
+        })
+        .join("");
+    }
+    if (h.length !== 6 || /[^0-9a-f]/i.test(h)) return null;
+    var n = parseInt(h, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+
+  function rgbToHex(r, g, b) {
+    return (
+      "#" +
+      [r, g, b]
+        .map(function (x) {
+          var s = clampByte(x).toString(16);
+          return s.length === 1 ? "0" + s : s;
+        })
+        .join("")
+    );
+  }
+
+  function normalizeHex(hex) {
+    var rgb = hexToRgb(hex);
+    if (!rgb) return DEFAULT_ACCENT;
+    return rgbToHex(rgb.r, rgb.g, rgb.b);
+  }
+
+  function mixRgb(a, b, t) {
+    return {
+      r: a.r + (b.r - a.r) * t,
+      g: a.g + (b.g - a.g) * t,
+      b: a.b + (b.b - a.b) * t,
+    };
+  }
+
+  function darkenRgb(rgb, amount) {
+    return mixRgb(rgb, { r: 0, g: 0, b: 0 }, amount);
+  }
+
+  function applyAccentHex(hex) {
+    var rgb = hexToRgb(hex);
+    if (!rgb) rgb = hexToRgb(DEFAULT_ACCENT);
+    var accentHex = normalizeHex(rgbToHex(rgb.r, rgb.g, rgb.b));
+    var hover = darkenRgb(rgb, 0.18);
+    var soft = mixRgb(rgb, { r: 255, g: 255, b: 255 }, 0.82);
+    var bgPage = mixRgb({ r: 238, g: 240, b: 244 }, rgb, 0.07);
+    var root = document.documentElement;
+    var r = rgb.r,
+      g = rgb.g,
+      b = rgb.b;
+
+    root.style.setProperty("--accent", accentHex);
+    root.style.setProperty("--accent-hover", rgbToHex(hover.r, hover.g, hover.b));
+    root.style.setProperty("--accent-soft", rgbToHex(soft.r, soft.g, soft.b));
+    root.style.setProperty("--bg", rgbToHex(bgPage.r, bgPage.g, bgPage.b));
+    root.style.setProperty("--pinned-border", "rgba(" + r + "," + g + "," + b + ",0.28)");
+    root.style.setProperty(
+      "--pinned-glow",
+      "0 2px 18px rgba(" + r + "," + g + "," + b + ",0.16), 0 1px 3px rgba(26, 29, 35, 0.05)"
+    );
+
+    var g1 = mixRgb({ r: 255, g: 255, b: 255 }, rgb, 0.02);
+    var g2 = mixRgb({ r: 255, g: 255, b: 255 }, rgb, 0.06);
+    root.style.setProperty(
+      "--pinned-surface",
+      "linear-gradient(165deg, #ffffff 0%, " +
+        rgbToHex(g1.r, g1.g, g1.b) +
+        " 40%, " +
+        rgbToHex(g2.r, g2.g, g2.b) +
+        " 100%)"
+    );
+
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", accentHex);
+    return accentHex;
+  }
+
+  function saveThemeAccent(hex) {
+    try {
+      localStorage.setItem(THEME_KEY, JSON.stringify({ accent: hex }));
+    } catch (e) {}
+  }
+
+  function loadTheme() {
+    try {
+      var raw = localStorage.getItem(THEME_KEY);
+      var hex = DEFAULT_ACCENT;
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (data && data.accent && hexToRgb(data.accent)) hex = normalizeHex(data.accent);
+      }
+      applyAccentHex(hex);
+      syncThemeUi(hex);
+    } catch (e) {
+      applyAccentHex(DEFAULT_ACCENT);
+      syncThemeUi(DEFAULT_ACCENT);
+    }
+  }
+
+  function getAppliedAccentHex() {
+    var fromCss = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+    if (fromCss && hexToRgb(fromCss)) return normalizeHex(fromCss);
+    return DEFAULT_ACCENT;
+  }
+
+  function syncThemeUi(hex) {
+    var n = normalizeHex(hex);
+    var picker = $("themeAccentPicker");
+    var hexEl = $("themeAccentHex");
+    if (picker) picker.value = n;
+    if (hexEl) hexEl.textContent = n;
+    document.querySelectorAll(".theme-preset").forEach(function (btn) {
+      var h = btn.getAttribute("data-hex");
+      var sel = !!(h && normalizeHex(h) === n);
+      btn.classList.toggle("is-selected", sel);
+      btn.setAttribute("aria-pressed", sel ? "true" : "false");
+    });
+  }
+
+  function renderThemePresets() {
+    var wrap = $("themePresets");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    THEME_PRESETS.forEach(function (p) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "theme-preset";
+      btn.setAttribute("data-hex", p.hex);
+      btn.setAttribute("aria-pressed", "false");
+
+      var sw = document.createElement("span");
+      sw.className = "theme-preset__swatch";
+      sw.style.background = p.hex;
+      sw.setAttribute("aria-hidden", "true");
+
+      var lab = document.createElement("span");
+      lab.textContent = p.label;
+
+      btn.appendChild(sw);
+      btn.appendChild(lab);
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var applied = applyAccentHex(p.hex);
+        saveThemeAccent(applied);
+        syncThemeUi(applied);
+        showToast("Đã đổi màu");
+      });
+      wrap.appendChild(btn);
+    });
+    syncThemeUi(getAppliedAccentHex());
+  }
+
+  function showAppMenuHome() {
+    var home = $("appMenuHomeBody");
+    var theme = $("appMenuThemeBody");
+    var gear = $("btnOpenTheme");
+    if (home) home.hidden = false;
+    if (theme) theme.hidden = true;
+    if (gear) {
+      gear.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  function showAppMenuTheme() {
+    var home = $("appMenuHomeBody");
+    var theme = $("appMenuThemeBody");
+    var gear = $("btnOpenTheme");
+    if (home) home.hidden = true;
+    if (theme) theme.hidden = false;
+    if (gear) {
+      gear.setAttribute("aria-expanded", "true");
+    }
+    syncThemeUi(getAppliedAccentHex());
   }
 
   function detectSource(url) {
@@ -205,21 +406,28 @@
   }
 
   function getFilteredSorted() {
-    var list = getFilteredOnly();
-    if (state.sort === "title") {
-      list.sort(function (a, b) {
+    var list = getFilteredOnly().slice();
+    var ord = orderIndexMap();
+
+    function secondarySort(a, b) {
+      if (state.sort === "title") {
         return (a.title || "").localeCompare(b.title || "", "vi", { sensitivity: "base" });
-      });
-    } else if (state.sort === "newest") {
-      list.sort(function (a, b) {
+      }
+      if (state.sort === "newest") {
         return new Date(b.createdAt) - new Date(a.createdAt);
-      });
-    } else if (state.sort === "manual") {
-      var ord = orderIndexMap();
-      list.sort(function (a, b) {
+      }
+      if (state.sort === "manual") {
         return (ord[a.id] || 0) - (ord[b.id] || 0);
-      });
+      }
+      return 0;
     }
+
+    list.sort(function (a, b) {
+      var ap = a.pinned ? 1 : 0;
+      var bp = b.pinned ? 1 : 0;
+      if (ap !== bp) return bp - ap;
+      return secondarySort(a, b);
+    });
     return list;
   }
 
@@ -263,7 +471,8 @@
       if (!canReorder()) return;
       e.preventDefault();
       e.stopPropagation();
-      var fromIdx = state.items.findIndex(function (x) {
+      var vis = getFilteredSorted();
+      var fromIdx = vis.findIndex(function (x) {
         return x.id === itemId;
       });
       if (fromIdx < 0) return;
@@ -308,11 +517,21 @@
       document.body.classList.remove("is-reordering");
       reorderPointer = null;
       if (from !== to && from >= 0 && to >= 0) {
-        var arr = state.items.slice();
-        var it = arr.splice(from, 1)[0];
-        var toClamped = Math.min(Math.max(0, to), arr.length);
-        arr.splice(toClamped, 0, it);
-        state.items = arr;
+        var ids = getFilteredSorted().map(function (x) {
+          return x.id;
+        });
+        var moved = ids.splice(from, 1)[0];
+        var toClamped = Math.min(Math.max(0, to), ids.length);
+        ids.splice(toClamped, 0, moved);
+        var byId = {};
+        state.items.forEach(function (x) {
+          byId[x.id] = x;
+        });
+        state.items = ids
+          .map(function (id) {
+            return byId[id];
+          })
+          .filter(Boolean);
         persist();
         render();
         showToast("Đã đổi thứ tự");
@@ -331,7 +550,7 @@
       el.textContent =
         state.search || state.filterTag
           ? "Tắt ô tìm kiếm và lọc thẻ để kéo đổi vị trí."
-          : "Giữ nút ⋮⋮ và kéo lên hoặc xuống để đổi thứ tự.";
+          : "Mục ghim luôn ở trên. Giữ nút ⋮⋮ và kéo để đổi thứ tự.";
     } else {
       el.hidden = true;
     }
@@ -407,6 +626,17 @@
     document.querySelectorAll(".card-li").forEach(function (li) {
       li.classList.remove("card-li--swipe-open");
     });
+  }
+
+  function togglePinItem(id) {
+    var it = state.items.find(function (x) {
+      return x.id === id;
+    });
+    if (!it) return;
+    it.pinned = !it.pinned;
+    persist();
+    render();
+    showToast(it.pinned ? "Đã ghim — luôn hiển thị trên cùng" : "Đã bỏ ghim");
   }
 
   function performDeleteItem(id) {
@@ -575,6 +805,7 @@
     var b = $("btnAppMenu");
     if (m) m.hidden = true;
     if (b) b.setAttribute("aria-expanded", "false");
+    showAppMenuHome();
   }
 
   function toggleAppMenu() {
@@ -588,6 +819,7 @@
     if (open) {
       m.hidden = false;
       b.setAttribute("aria-expanded", "true");
+      showAppMenuHome();
     } else {
       m.hidden = true;
       b.setAttribute("aria-expanded", "false");
@@ -798,7 +1030,7 @@
 
     filtered.forEach(function (item) {
       var li = document.createElement("li");
-      li.className = "card-li";
+      li.className = "card-li" + (item.pinned ? " card-li--pinned" : "");
       li.dataset.itemId = item.id;
 
       var swipe = document.createElement("div");
@@ -864,6 +1096,17 @@
 
       var title = document.createElement("h3");
       title.className = "card__title";
+      if (item.pinned) {
+        var pinMark = document.createElement("span");
+        pinMark.className = "card__pin";
+        pinMark.setAttribute("aria-label", "Đã ghim");
+        pinMark.title = "Đã ghim — luôn hiển thị trên cùng";
+        pinMark.innerHTML =
+          '<svg class="card__pin-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
+          '<path fill="currentColor" d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5v7l1 1 1-1v-7h5v-2c-1.66 0-3-1.34-3-3z"/>' +
+          "</svg>";
+        title.appendChild(pinMark);
+      }
       var link = document.createElement("a");
       link.href = item.url;
       link.target = "_blank";
@@ -939,6 +1182,9 @@
       });
       addMenuItem("Sửa", function () {
         openEdit(item);
+      });
+      addMenuItem(item.pinned ? "Bỏ ghim" : "Ghim lên đầu", function () {
+        togglePinItem(item.id);
       });
 
       moreBtn.addEventListener("click", function (e) {
@@ -1074,6 +1320,35 @@
       toggleAppMenu();
     });
 
+    $("btnOpenTheme").addEventListener("click", function (e) {
+      e.stopPropagation();
+      showAppMenuTheme();
+    });
+
+    $("btnThemeBack").addEventListener("click", function (e) {
+      e.stopPropagation();
+      showAppMenuHome();
+    });
+
+    $("themeAccentPicker").addEventListener("input", function () {
+      var v = $("themeAccentPicker").value;
+      var applied = applyAccentHex(v);
+      saveThemeAccent(applied);
+      syncThemeUi(applied);
+    });
+
+    $("themeAccentPicker").addEventListener("change", function () {
+      showToast("Đã đổi màu");
+    });
+
+    $("btnThemeReset").addEventListener("click", function (e) {
+      e.stopPropagation();
+      var applied = applyAccentHex(DEFAULT_ACCENT);
+      saveThemeAccent(applied);
+      syncThemeUi(applied);
+      showToast("Đã khôi phục màu mặc định");
+    });
+
     $("appMenuScrim").addEventListener("click", function (e) {
       e.stopPropagation();
       closeAppMenu();
@@ -1168,6 +1443,7 @@
             note: note,
             tags: state.formTags.slice(),
             createdAt: x.createdAt,
+            pinned: !!x.pinned,
           };
         });
         showToast("Đã cập nhật");
@@ -1179,6 +1455,7 @@
           note: note,
           tags: state.formTags.slice(),
           createdAt: new Date().toISOString(),
+          pinned: false,
         });
         showToast("Đã lưu");
       }
@@ -1204,6 +1481,8 @@
     window.addEventListener("offline", refreshNetworkUi);
 
     initSortMenuDecor();
+    loadTheme();
+    renderThemePresets();
     render();
     refreshNetworkUi();
   }
