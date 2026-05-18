@@ -1495,13 +1495,27 @@
 
     var headerUrlInput = $("headerUrlInput");
     if (headerUrlInput) {
-      headerUrlInput.addEventListener("focus", function () {
-        var len = headerUrlInput.value.length;
-        if (!len) return;
-        try {
-          headerUrlInput.setSelectionRange(0, len);
-        } catch (err) {}
-      });
+      function anchorHeaderUrlEditMenu() {
+        requestAnimationFrame(function () {
+          var len = headerUrlInput.value.length;
+          try {
+            if (len) headerUrlInput.setSelectionRange(0, len);
+            else headerUrlInput.setSelectionRange(0, 0);
+          } catch (err) {}
+        });
+      }
+
+      headerUrlInput.addEventListener(
+        "touchstart",
+        function () {
+          if (document.activeElement !== headerUrlInput) {
+            headerUrlInput.focus({ preventScroll: true });
+          }
+        },
+        { passive: true }
+      );
+
+      headerUrlInput.addEventListener("focus", anchorHeaderUrlEditMenu);
     }
 
     $("itemForm").addEventListener("click", function (e) {

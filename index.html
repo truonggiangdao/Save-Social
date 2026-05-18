@@ -37,19 +37,20 @@
           </button>
         </div>
         <div class="header__add-slot">
-          <label class="visually-hidden" for="headerUrlInput">URL liên kết</label>
-          <input
-            type="text"
-            id="headerUrlInput"
-            class="input header__url-input"
-            placeholder="Dán link rồi nhấn +"
-            autocomplete="off"
-            autocapitalize="off"
-            autocorrect="off"
-            spellcheck="false"
-            readonly
-            aria-label="Dán link — chạm để dán hoặc chọn tất cả"
-          />
+          <div class="header__url-wrap">
+            <textarea
+              id="headerUrlInput"
+              class="input header__url-input"
+              rows="1"
+              placeholder="Dán link rồi nhấn +"
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+              readonly
+              aria-label="Dán link — chạm để dán hoặc chọn tất cả"
+            ></textarea>
+          </div>
           <button type="button" id="btnQuickAdd" class="toolbar__icon-btn" title="Thêm nhanh" aria-label="Thêm link đã dán">
             <svg class="toolbar__svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
               <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
