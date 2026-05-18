@@ -8,16 +8,16 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Save Social" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="save-social-build" content="202605186" />
+  <meta name="save-social-build" content="202605187" />
   <meta http-equiv="Cache-Control" content="no-cache" />
   <title>Save Social</title>
-  <script src="version.js?v=202605186"></script>
-  <link rel="manifest" href="manifest.webmanifest?v=202605186" />
-  <link rel="icon" href="assets/favicon.ico?v=202605186" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=202605186" />
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=202605186" />
-  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=202605186" />
-  <link rel="stylesheet" href="styles.css?v=202605186" />
+  <script src="version.js?v=202605187"></script>
+  <link rel="manifest" href="manifest.webmanifest?v=202605187" />
+  <link rel="icon" href="assets/favicon.ico?v=202605187" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=202605187" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=202605187" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=202605187" />
+  <link rel="stylesheet" href="styles.css?v=202605187" />
 </head>
 <body>
   <div class="app">
@@ -66,18 +66,18 @@
               >
                 Dán
               </button>
-              <div
+              <input
+                type="text"
                 id="headerUrlInput"
-                class="header__url-input header__url-field"
-                contenteditable="true"
-                role="textbox"
-                spellcheck="false"
+                class="header__url-input"
+                placeholder="Chạm ô để sửa · nhấn + để lưu"
+                autocomplete="one-time-code"
                 autocapitalize="off"
                 autocorrect="off"
-                inputmode="none"
-                data-placeholder="Chạm Dán hoặc ô trống"
+                spellcheck="false"
+                enterkeyhint="done"
                 aria-label="Liên kết cần lưu"
-              ></div>
+              />
             </div>
           </form>
           <button type="button" id="btnQuickAdd" class="toolbar__icon-btn toolbar__icon-btn--quick-add" title="Thêm nhanh" aria-label="Thêm link đã dán">
@@ -165,7 +165,7 @@
       <ul class="list" id="itemList"></ul>
       <div class="empty" id="emptyState" hidden>
         <p class="empty__title">Chưa có liên kết nào</p>
-        <p class="empty__text">Dán link vào ô trên cùng rồi nhấn <strong>+</strong> để lưu nhanh.</p>
+        <p class="empty__text">Copy link → mở app → nhấn <strong>Dán</strong> → nhấn <strong>+</strong> để lưu.</p>
       </div>
     </main>
   </div>
@@ -275,8 +275,22 @@
           ></textarea>
         </div>
         <div class="form__group form__group--tags">
-          <span class="label-block">Thẻ</span>
-          <div class="form-tags-toolbar">
+          <div class="form-tags-head">
+            <span class="label-block form-tags-head__label">Thẻ</span>
+            <button
+              type="button"
+              id="btnFormTagManage"
+              class="form-tags-manage-btn"
+              aria-pressed="false"
+              aria-controls="formTagChips"
+            >
+              Quản lý
+            </button>
+          </div>
+          <p id="formTagManageHint" class="form-tags-manage-hint" hidden>
+            Chạm × để xóa thẻ khỏi toàn bộ thư viện
+          </p>
+          <div id="formTagsToolbar" class="form-tags-toolbar">
             <div id="formTagChips" class="form-tag-chips" role="group" aria-label="Chọn thẻ"></div>
             <div id="formTagInputWrap" class="form-tag-input-wrap" hidden>
               <input type="text" id="tagInput" class="input input--tag-inline" placeholder="Tên thẻ — Enter để thêm" autocomplete="off" />
@@ -299,6 +313,6 @@
 
   <div class="toast" id="toast" hidden role="status"></div>
 
-  <script src="app.js?v=202605186"></script>
+  <script src="app.js?v=202605187"></script>
 </body>
 </html>

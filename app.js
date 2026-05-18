@@ -27,6 +27,8 @@
     sort: "newest",
     editingId: null,
     formTags: [],
+    formTagPickerExtra: [],
+    formTagManageMode: false,
     searchExpanded: false,
     formTagAddOpen: false,
     formInfoOpen: false,
@@ -35,10 +37,6 @@
   };
 
   var editAutoTitleTimer = null;
-  var TAG_LONG_PRESS_MS = 520;
-  var tagLongPressTimer = null;
-  var tagLongPressHandled = false;
-  var tagDeleteMenuSuppressUntil = 0;
   var headerQuickAddBusy = false;
   var BUILD_STORAGE_KEY = "saveSocialBuild_v1";
 
@@ -893,11 +891,142 @@
     render();
   }
 
+  function appendCardContentCluster(card, item, opts) {
+    opts = opts || {};
+    var isPreview = !!opts.isPreview;
+    var src = detectSource(item.url);
+    var tw = thumbWrapForUrl(item.url);
+
+    var cluster = document.createElement("div");
+    cluster.className = "card__content-cluster";
+
+    var thumbCol = document.createElement("div");
+    thumbCol.className = "card__thumb-col";
+
+    var thumbWrap = document.createElement("a");
+    thumbWrap.className = "card__thumb-link";
+    thumbWrap.href = item.url;
+    thumbWrap.target = "_blank";
+    thumbWrap.rel = "noopener noreferrer";
+    thumbWrap.setAttribute("aria-label", "Mở video / trang");
+
+    if (tw.kind === "youtube") {
+      var img = document.createElement("img");
+      img.className = "card__thumb";
+      img.alt = "";
+      img.decoding = "async";
+      img.loading = "lazy";
+      img.src = tw.urls[0];
+      img.onerror = function () {
+        if (tw.urls[1] && img.src !== tw.urls[1]) img.src = tw.urls[1];
+      };
+      thumbWrap.appendChild(img);
+    } else if (item.thumbUrl && src === "facebook") {
+      var imgFb = document.createElement("img");
+      imgFb.className = "card__thumb";
+      imgFb.alt = "";
+      imgFb.decoding = "async";
+      imgFb.loading = "lazy";
+      imgFb.referrerPolicy = "no-referrer";
+      imgFb.src = item.thumbUrl;
+      imgFb.onerror = function () {
+        if (isPreview) {
+          var phPrev = document.createElement("div");
+          phPrev.className = "card__thumb card__thumb--" + tw.platform;
+          phPrev.setAttribute("aria-hidden", "true");
+          thumbWrap.replaceChildren(phPrev);
+          return;
+        }
+        fbThumbFailed[item.id] = true;
+        clearItemThumbUrl(item.id);
+        render();
+      };
+      thumbWrap.appendChild(imgFb);
+    } else {
+      var ph = document.createElement("div");
+      ph.className = "card__thumb card__thumb--" + tw.platform;
+      ph.setAttribute("aria-hidden", "true");
+      thumbWrap.appendChild(ph);
+    }
+    thumbCol.appendChild(thumbWrap);
+    cluster.appendChild(thumbCol);
+
+    var main = document.createElement("div");
+    main.className = "card__main";
+
+    var titleEl = document.createElement("h3");
+    titleEl.className = "card__title";
+    if (item.pinned) {
+      var pinMark = document.createElement("span");
+      pinMark.className = "card__pin";
+      pinMark.setAttribute("aria-label", "Đã ghim");
+      pinMark.title = "Đã ghim — luôn hiển thị trên cùng";
+      pinMark.innerHTML =
+        '<svg class="card__pin-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
+        '<path fill="currentColor" d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5v7l1 1 1-1v-7h5v-2c-1.66 0-3-1.34-3-3z"/>' +
+        "</svg>";
+      titleEl.appendChild(pinMark);
+    }
+    var link = document.createElement("a");
+    link.href = item.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = item.title || item.url;
+    titleEl.appendChild(link);
+    main.appendChild(titleEl);
+
+    var meta = document.createElement("div");
+    meta.className = "card__meta";
+    meta.textContent = sourceLabel(src) + " · " + formatDate(item.createdAt);
+    main.appendChild(meta);
+
+    var tagsDiv = document.createElement("div");
+    tagsDiv.className = "card__tags";
+    (item.tags || []).forEach(function (t) {
+      var pill = document.createElement("span");
+      pill.className = "tag-pill";
+      pill.textContent = t;
+      tagsDiv.appendChild(pill);
+    });
+    if (tagsDiv.children.length) main.appendChild(tagsDiv);
+
+    var noteText = (item.note || "").trim();
+    if (noteText) {
+      var note = document.createElement("p");
+      note.className = "card__note card__note--thumb-title-row";
+      note.textContent = noteText;
+      main.appendChild(note);
+    }
+
+    cluster.appendChild(main);
+    card.appendChild(cluster);
+  }
+
+  function formPreviewItemFromForm() {
+    var url = $("urlInput").value.trim();
+    var title = $("titleInput").value.trim();
+    var editingItem =
+      state.editingId &&
+      state.items.find(function (x) {
+        return x.id === state.editingId;
+      });
+    var sameUrl = editingItem && (editingItem.url || "").trim() === url;
+    return {
+      url: url,
+      title: title || suggestTitleLocal(url),
+      note: ($("noteInput").value || "").trim(),
+      tags: (state.formTags || []).slice(),
+      pinned: editingItem ? !!editingItem.pinned : false,
+      createdAt: editingItem ? editingItem.createdAt : new Date().toISOString(),
+      id: editingItem ? editingItem.id : null,
+      thumbUrl: sameUrl && detectSource(url) === "facebook" ? editingItem.thumbUrl : null,
+    };
+  }
+
   function renderFormPreview() {
     var box = $("formPreview");
     if (!box) return;
     var url = $("urlInput").value.trim();
-    var title = $("titleInput").value.trim();
     if (!url) {
       box.hidden = true;
       box.innerHTML = "";
@@ -910,68 +1039,14 @@
       box.innerHTML = "";
       return;
     }
-    var tw = thumbWrapForUrl(url);
-    var previewTitle = title || suggestTitleLocal(url);
-    var editingItem =
-      state.editingId &&
-      state.items.find(function (x) {
-        return x.id === state.editingId;
-      });
-    var fbPreviewThumb =
-      editingItem &&
-      detectSource(url) === "facebook" &&
-      (editingItem.url || "").trim() === url &&
-      editingItem.thumbUrl;
     box.hidden = false;
     box.innerHTML = "";
     box.className = "form-preview";
 
-    var row = document.createElement("div");
-    row.className = "form-preview__row";
-
-    var thumbCol = document.createElement("div");
-    thumbCol.className = "form-preview__thumb-wrap";
-    if (tw.kind === "youtube") {
-      var img = document.createElement("img");
-      img.className = "form-preview__thumb";
-      img.alt = "";
-      img.decoding = "async";
-      img.loading = "lazy";
-      img.src = tw.urls[0];
-      img.onerror = function () {
-        if (tw.urls[1] && img.src !== tw.urls[1]) img.src = tw.urls[1];
-      };
-      thumbCol.appendChild(img);
-    } else if (fbPreviewThumb) {
-      var imgFbPrev = document.createElement("img");
-      imgFbPrev.className = "form-preview__thumb";
-      imgFbPrev.alt = "";
-      imgFbPrev.decoding = "async";
-      imgFbPrev.loading = "lazy";
-      imgFbPrev.referrerPolicy = "no-referrer";
-      imgFbPrev.src = fbPreviewThumb;
-      thumbCol.appendChild(imgFbPrev);
-    } else {
-      var ph = document.createElement("div");
-      ph.className = "form-preview__thumb form-preview__thumb--" + tw.platform;
-      ph.setAttribute("aria-hidden", "true");
-      thumbCol.appendChild(ph);
-    }
-
-    var main = document.createElement("div");
-    main.className = "form-preview__main";
-    var h = document.createElement("div");
-    h.className = "form-preview__title";
-    h.textContent = previewTitle;
-    main.appendChild(h);
-    var meta = document.createElement("div");
-    meta.className = "form-preview__meta";
-    meta.textContent = sourceLabel(detectSource(url)) + " · Xem trước như trong danh sách";
-    main.appendChild(meta);
-
-    row.appendChild(thumbCol);
-    row.appendChild(main);
-    box.appendChild(row);
+    var card = document.createElement("div");
+    card.className = "card card--row form-preview__card";
+    appendCardContentCluster(card, formPreviewItemFromForm(), { isPreview: true });
+    box.appendChild(card);
   }
 
   function formatDate(iso) {
@@ -1049,11 +1124,13 @@
     $("itemForm").reset();
     $("editId").value = "";
     state.formTags = [];
+    state.formTagPickerExtra = [];
+    state.formTagManageMode = false;
     state.formTagAddOpen = false;
     state.formInfoOpen = false;
     state.editTitleTouched = false;
     setFormUrlGroupVisible(false);
-    closeTagDeleteMenu();
+    syncFormTagManageUi();
     closeFormInfoPopover();
     var tagWrap = $("formTagInputWrap");
     if (tagWrap) tagWrap.hidden = true;
@@ -1084,19 +1161,16 @@
       return a.localeCompare(b, "vi");
     });
     var tail = [];
-    state.formTags.forEach(function (t) {
-      var n = normalizeTag(t);
+    function addTail(tag) {
+      var n = normalizeTag(tag);
       if (n && !set[n]) {
         set[n] = true;
         tail.push(n);
       }
-    });
+    }
+    state.formTagPickerExtra.forEach(addTail);
+    state.formTags.forEach(addTail);
     return base.concat(tail);
-  }
-
-  function closeTagDeleteMenu() {
-    var menu = $("formTagDeleteMenu");
-    if (menu) menu.remove();
   }
 
   function deleteTagGlobally(tag) {
@@ -1120,77 +1194,39 @@
     state.formTags = state.formTags.filter(function (t) {
       return normalizeTag(t) !== n;
     });
+    state.formTagPickerExtra = state.formTagPickerExtra.filter(function (t) {
+      return normalizeTag(t) !== n;
+    });
     persist();
-    closeTagDeleteMenu();
     renderFormTagChips();
     render();
     showToast("Đã xóa thẻ");
   }
 
-  function showTagDeleteMenu(anchorEl, tag) {
-    closeTagDeleteMenu();
-    var menu = document.createElement("div");
-    menu.id = "formTagDeleteMenu";
-    menu.className = "form-tag-delete-menu";
-    menu.setAttribute("role", "menu");
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "form-tag-delete-menu__item";
-    btn.setAttribute("role", "menuitem");
-    btn.textContent = "Xóa thẻ";
-    btn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      deleteTagGlobally(tag);
-    });
-    menu.addEventListener("click", function (e) {
-      e.stopPropagation();
-    });
-    menu.appendChild(btn);
-    menu.style.position = "fixed";
-    menu.style.visibility = "hidden";
-    var modalPanel = document.querySelector(".modal__panel");
-    (modalPanel || document.body).appendChild(menu);
-    tagDeleteMenuSuppressUntil = Date.now() + 450;
-    var mw = menu.offsetWidth;
-    var mh = menu.offsetHeight;
-    menu.style.visibility = "visible";
-    var rect = anchorEl.getBoundingClientRect();
-    var top = rect.bottom + 6;
-    var left = Math.min(rect.left, window.innerWidth - mw - 8);
-    if (top + mh > window.innerHeight - 8) {
-      top = Math.max(8, rect.top - mh - 6);
+  function syncFormTagManageUi() {
+    var btn = $("btnFormTagManage");
+    var toolbar = $("formTagsToolbar");
+    var chips = $("formTagChips");
+    var hint = $("formTagManageHint");
+    if (btn) {
+      btn.textContent = state.formTagManageMode ? "Xong" : "Quản lý";
+      btn.setAttribute("aria-pressed", state.formTagManageMode ? "true" : "false");
+      btn.classList.toggle("is-active", state.formTagManageMode);
     }
-    menu.style.top = top + "px";
-    menu.style.left = Math.max(8, left) + "px";
+    if (toolbar) toolbar.classList.toggle("is-manage", state.formTagManageMode);
+    if (chips) chips.classList.toggle("is-manage", state.formTagManageMode);
+    if (hint) hint.hidden = !state.formTagManageMode;
   }
 
-  function bindTagChipLongPress(btn, tag) {
-    function clearPress() {
-      if (tagLongPressTimer) {
-        clearTimeout(tagLongPressTimer);
-        tagLongPressTimer = null;
-      }
+  function setFormTagManageMode(open) {
+    state.formTagManageMode = !!open;
+    if (state.formTagManageMode) {
+      state.formTagAddOpen = false;
+      var wi = $("formTagInputWrap");
+      if (wi) wi.hidden = true;
     }
-    btn.addEventListener("pointerdown", function (e) {
-      if (e.button !== 0) return;
-      tagLongPressHandled = false;
-      clearPress();
-      try {
-        btn.setPointerCapture(e.pointerId);
-      } catch (ex) {}
-      tagLongPressTimer = setTimeout(function () {
-        tagLongPressTimer = null;
-        tagLongPressHandled = true;
-        try {
-          btn.releasePointerCapture(e.pointerId);
-        } catch (ex) {}
-        showTagDeleteMenu(btn, tag);
-      }, TAG_LONG_PRESS_MS);
-    });
-    btn.addEventListener("pointerup", function (e) {
-      if (e.pointerId !== undefined && tagLongPressTimer) clearPress();
-    });
-    btn.addEventListener("pointercancel", clearPress);
+    syncFormTagManageUi();
+    renderFormTagChips();
   }
 
   function closeFormInfoPopover() {
@@ -1247,10 +1283,7 @@
         return normalizeTag(t) === tag;
       });
       function toggleTag() {
-        if (tagLongPressHandled) {
-          tagLongPressHandled = false;
-          return;
-        }
+        if (state.formTagManageMode) return;
         var i = -1;
         state.formTags.forEach(function (t, idx) {
           if (normalizeTag(t) === tag) i = idx;
@@ -1259,14 +1292,30 @@
         else state.formTags.splice(i, 1);
         renderFormTagChips();
       }
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "chip form-tag-chip" + (selected ? " is-active" : "");
-      btn.textContent = tag;
-      btn.setAttribute("aria-pressed", selected ? "true" : "false");
-      btn.addEventListener("click", toggleTag);
-      bindTagChipLongPress(btn, tag);
-      wrap.appendChild(btn);
+      var chipWrap = document.createElement("span");
+      chipWrap.className = "chip form-tag-chip-wrap" + (selected ? " is-active" : "");
+      var mainBtn = document.createElement("button");
+      mainBtn.type = "button";
+      mainBtn.className = "form-tag-chip__main";
+      mainBtn.textContent = tag;
+      mainBtn.setAttribute("aria-pressed", selected ? "true" : "false");
+      if (!state.formTagManageMode) {
+        mainBtn.addEventListener("click", toggleTag);
+      }
+      chipWrap.appendChild(mainBtn);
+      if (state.formTagManageMode) {
+        var removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "form-tag-chip__remove";
+        removeBtn.setAttribute("aria-label", "Xóa thẻ " + tag);
+        removeBtn.textContent = "×";
+        removeBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          deleteTagGlobally(tag);
+        });
+        chipWrap.appendChild(removeBtn);
+      }
+      wrap.appendChild(chipWrap);
     });
 
     var addBtn = document.createElement("button");
@@ -1278,7 +1327,9 @@
     wrap.appendChild(addBtn);
 
     var wi = $("formTagInputWrap");
-    if (wi) wi.hidden = !state.formTagAddOpen;
+    if (wi) wi.hidden = !state.formTagAddOpen || state.formTagManageMode;
+    syncFormTagManageUi();
+    if (!$("modal").hidden) renderFormPreview();
   }
 
   function addFormTag(tag) {
@@ -1290,10 +1341,12 @@
       });
       persistDeletedTags();
     }
-    if (state.formTags.indexOf(n) === -1) {
-      state.formTags.push(n);
-      renderFormTagChips();
-    }
+    var inForm = state.formTags.some(function (t) {
+      return normalizeTag(t) === n;
+    });
+    if (!inForm) state.formTags.push(n);
+    if (state.formTagPickerExtra.indexOf(n) === -1) state.formTagPickerExtra.push(n);
+    renderFormTagChips();
   }
 
   function resolveQuickTitle(url) {
@@ -1349,54 +1402,28 @@
   function getHeaderUrlValue() {
     var el = $("headerUrlInput");
     if (!el) return "";
-    return (el.textContent || "").replace(/\s+/g, " ").trim();
+    return (el.value || "").trim();
   }
 
   function clearHeaderUrlValue() {
     var el = $("headerUrlInput");
-    if (!el) return;
-    el.textContent = "";
-    el.innerHTML = "";
+    if (el) el.value = "";
   }
 
   function setHeaderUrlValue(text) {
     var el = $("headerUrlInput");
-    if (!el) return;
-    el.innerHTML = "";
-    el.textContent = (text || "").trim();
+    if (el) el.value = (text || "").trim();
   }
 
-  function normalizeHeaderUrlField() {
+  function blurHeaderUrlInput() {
     var el = $("headerUrlInput");
-    if (!el) return;
-    var plain = getHeaderUrlValue();
-    if (el.childNodes.length !== 1 || el.firstChild.nodeType !== 3) {
-      setHeaderUrlValue(plain);
-    }
-  }
-
-  function focusHeaderUrlField(selectAll) {
-    var el = $("headerUrlInput");
-    if (!el) return;
-    el.focus({ preventScroll: true });
-    requestAnimationFrame(function () {
-      var len = (el.textContent || "").length;
-      if (!len) return;
-      if (selectAll !== false) {
-        var range = document.createRange();
-        range.selectNodeContents(el);
-        var sel = window.getSelection();
-        if (sel) {
-          sel.removeAllRanges();
-          sel.addRange(range);
-        }
-      }
-    });
+    if (el && document.activeElement === el) el.blur();
   }
 
   function pasteIntoHeaderFromClipboard() {
+    blurHeaderUrlInput();
     if (!navigator.clipboard || !navigator.clipboard.readText) {
-      showToast("Không đọc được clipboard — thử nhấn giữ ô để dán");
+      showToast("Không đọc được clipboard");
       return Promise.resolve();
     }
     return navigator.clipboard
@@ -1408,7 +1435,7 @@
           return;
         }
         setHeaderUrlValue(raw);
-        focusHeaderUrlField(true);
+        blurHeaderUrlInput();
       })
       .catch(function () {
         showToast("Cho phép truy cập clipboard để dán");
@@ -1420,7 +1447,7 @@
     var btn = $("btnQuickAdd");
     var raw = getHeaderUrlValue();
     if (!raw) {
-      showToast("Dán link vào ô rồi nhấn +");
+      showToast("Nhấn Dán hoặc dán link vào ô rồi nhấn +");
       return;
     }
     try {
@@ -1523,7 +1550,7 @@
       } else {
         emptyEl.querySelector(".empty__title").textContent = "Chưa có liên kết nào";
         emptyEl.querySelector(".empty__text").innerHTML =
-          "Dán link vào ô trên cùng rồi nhấn <strong>+</strong> để lưu nhanh.";
+          "Copy link → mở app → nhấn <strong>Dán</strong> → nhấn <strong>+</strong> để lưu.";
       }
       return;
     }
@@ -1538,9 +1565,6 @@
       var card = document.createElement("div");
       card.className = "card card--row";
 
-      var src = detectSource(item.url);
-      var tw = thumbWrapForUrl(item.url);
-
       if (canReorder() && state.items.length > 1) {
         var grab = document.createElement("button");
         grab.type = "button";
@@ -1551,103 +1575,7 @@
         card.appendChild(grab);
       }
 
-      var cluster = document.createElement("div");
-      cluster.className = "card__content-cluster";
-
-      var thumbCol = document.createElement("div");
-      thumbCol.className = "card__thumb-col";
-
-      var thumbWrap = document.createElement("a");
-      thumbWrap.className = "card__thumb-link";
-      thumbWrap.href = item.url;
-      thumbWrap.target = "_blank";
-      thumbWrap.rel = "noopener noreferrer";
-      thumbWrap.setAttribute("aria-label", "Mở video / trang");
-
-      if (tw.kind === "youtube") {
-        var img = document.createElement("img");
-        img.className = "card__thumb";
-        img.alt = "";
-        img.decoding = "async";
-        img.loading = "lazy";
-        img.src = tw.urls[0];
-        img.onerror = function () {
-          if (tw.urls[1] && img.src !== tw.urls[1]) img.src = tw.urls[1];
-        };
-        thumbWrap.appendChild(img);
-      } else if (item.thumbUrl && src === "facebook") {
-        var imgFb = document.createElement("img");
-        imgFb.className = "card__thumb";
-        imgFb.alt = "";
-        imgFb.decoding = "async";
-        imgFb.loading = "lazy";
-        imgFb.referrerPolicy = "no-referrer";
-        imgFb.src = item.thumbUrl;
-        imgFb.onerror = function () {
-          fbThumbFailed[item.id] = true;
-          clearItemThumbUrl(item.id);
-          render();
-        };
-        thumbWrap.appendChild(imgFb);
-      } else {
-        var ph = document.createElement("div");
-        ph.className = "card__thumb card__thumb--" + tw.platform;
-        ph.setAttribute("aria-hidden", "true");
-        thumbWrap.appendChild(ph);
-      }
-      thumbCol.appendChild(thumbWrap);
-      cluster.appendChild(thumbCol);
-
-      var main = document.createElement("div");
-      main.className = "card__main";
-
-      var title = document.createElement("h3");
-      title.className = "card__title";
-      if (item.pinned) {
-        var pinMark = document.createElement("span");
-        pinMark.className = "card__pin";
-        pinMark.setAttribute("aria-label", "Đã ghim");
-        pinMark.title = "Đã ghim — luôn hiển thị trên cùng";
-        pinMark.innerHTML =
-          '<svg class="card__pin-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">' +
-          '<path fill="currentColor" d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5v7l1 1 1-1v-7h5v-2c-1.66 0-3-1.34-3-3z"/>' +
-          "</svg>";
-        title.appendChild(pinMark);
-      }
-      var link = document.createElement("a");
-      link.href = item.url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = item.title || item.url;
-      title.appendChild(link);
-      main.appendChild(title);
-
-      var meta = document.createElement("div");
-      meta.className = "card__meta";
-      meta.textContent = sourceLabel(src) + " · " + formatDate(item.createdAt);
-      main.appendChild(meta);
-
-      var tagsDiv = document.createElement("div");
-      tagsDiv.className = "card__tags";
-      (item.tags || []).forEach(function (t) {
-        var pill = document.createElement("span");
-        pill.className = "tag-pill";
-        pill.textContent = t;
-        tagsDiv.appendChild(pill);
-      });
-      if (tagsDiv.children.length) main.appendChild(tagsDiv);
-
-      var noteText = (item.note || "").trim();
-      if (noteText) {
-        var note = document.createElement("p");
-        note.className = "card__note card__note--thumb-title-row";
-        note.textContent = noteText;
-        main.appendChild(note);
-      }
-
-      cluster.appendChild(main);
-
-      card.appendChild(cluster);
+      appendCardContentCluster(card, item);
 
       var menuWrap = document.createElement("div");
       menuWrap.className = "card__menu-wrap card__menu-wrap--float";
@@ -1681,11 +1609,11 @@
       addMenuItem("Mở", function () {
         window.open(item.url, "_blank", "noopener,noreferrer");
       });
-      addMenuItem("Sao chép", function () {
-        copyUrl(item.url);
-      });
       addMenuItem("Sửa", function () {
         openEdit(item);
+      });
+      addMenuItem("Sao chép", function () {
+        copyUrl(item.url);
       });
       addMenuItem(item.pinned ? "Bỏ ghim" : "Ghim lên đầu", function () {
         togglePinItem(item.id);
@@ -1768,10 +1696,13 @@
     $("titleInput").value = item.title;
     $("noteInput").value = item.note || "";
     state.formTags = (item.tags || []).slice();
+    state.formTagPickerExtra = [];
+    state.formTagManageMode = false;
     state.formTagAddOpen = false;
     state.formInfoOpen = false;
     state.editTitleTouched = false;
     syncFormInfoUi();
+    syncFormTagManageUi();
     renderFormTagChips();
     updateSourceBadge();
     openModal();
@@ -1809,23 +1740,8 @@
     }
 
     if (headerUrlInput) {
-      headerUrlInput.addEventListener("paste", function (e) {
-        e.preventDefault();
-        var text = e.clipboardData ? e.clipboardData.getData("text/plain") : "";
-        if (!text) return;
-        setHeaderUrlValue(text);
-        focusHeaderUrlField(true);
-      });
-
-      headerUrlInput.addEventListener("input", normalizeHeaderUrlField);
-
       headerUrlInput.addEventListener("click", function (e) {
         e.stopPropagation();
-        if (getHeaderUrlValue()) {
-          focusHeaderUrlField(true);
-          return;
-        }
-        pasteIntoHeaderFromClipboard();
       });
 
       headerUrlInput.addEventListener("keydown", function (e) {
@@ -1834,13 +1750,18 @@
           quickAddFromHeader();
         }
       });
+    }
 
-      headerUrlInput.addEventListener("blur", function () {
-        if (!getHeaderUrlValue()) clearHeaderUrlValue();
+    var btnFormTagManage = $("btnFormTagManage");
+    if (btnFormTagManage) {
+      btnFormTagManage.addEventListener("click", function (e) {
+        e.stopPropagation();
+        setFormTagManageMode(!state.formTagManageMode);
       });
     }
 
     $("itemForm").addEventListener("click", function (e) {
+      if (state.formTagManageMode) return;
       var addChip = e.target.closest(".form-tag-chip--add");
       if (!addChip) return;
       e.preventDefault();
@@ -1904,9 +1825,6 @@
     });
 
     document.addEventListener("click", function (e) {
-      if (Date.now() < tagDeleteMenuSuppressUntil) return;
-      if (e.target.closest("#formTagDeleteMenu")) return;
-      closeTagDeleteMenu();
       closeSortMenu();
       closeAllCardMenus();
       closeFormInfoPopover();
@@ -1970,6 +1888,7 @@
       state.editTitleTouched = true;
       renderFormPreview();
     });
+    $("noteInput").addEventListener("input", renderFormPreview);
 
     $("tagInput").addEventListener("keydown", function (e) {
       if (e.key === "Enter") {
@@ -2042,13 +1961,14 @@
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") {
         if (!$("modal").hidden) {
-          if (state.formInfoOpen) closeFormInfoPopover();
+          if (state.formTagManageMode) setFormTagManageMode(false);
+          else if (state.formInfoOpen) closeFormInfoPopover();
           else closeModal();
         } else if ($("appMenu") && !$("appMenu").hidden) closeAppMenu();
         else {
           closeSortMenu();
           closeAllCardMenus();
-          closeTagDeleteMenu();
+          if (state.formTagManageMode) setFormTagManageMode(false);
           closeFormInfoPopover();
           if (state.searchExpanded) setSearchExpanded(false);
         }
