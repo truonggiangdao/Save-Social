@@ -37,6 +37,60 @@
   var tagLongPressTimer = null;
   var tagLongPressHandled = false;
   var headerQuickAddBusy = false;
+  var BUILD_STORAGE_KEY = "saveSocialBuild_v1";
+
+  function getBuildId() {
+    if (typeof window.SAVE_SOCIAL_BUILD === "string" && window.SAVE_SOCIAL_BUILD) {
+      return window.SAVE_SOCIAL_BUILD;
+    }
+    var meta = document.querySelector('meta[name="save-social-build"]');
+    return meta ? meta.getAttribute("content") || "0" : "0";
+  }
+
+  function ensureFreshBuild(done) {
+    var build = getBuildId();
+    try {
+      var prev = localStorage.getItem(BUILD_STORAGE_KEY);
+      if (prev && prev !== build) {
+        localStorage.setItem(BUILD_STORAGE_KEY, build);
+        var url = new URL(window.location.href);
+        if (url.searchParams.get("_sv") !== build) {
+          url.searchParams.set("_sv", build);
+          window.location.replace(url.toString());
+          return;
+        }
+      }
+      if (!prev || prev !== build) localStorage.setItem(BUILD_STORAGE_KEY, build);
+    } catch (e) {}
+    done();
+  }
+
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    var build = getBuildId();
+    navigator.serviceWorker
+      .register("./sw.js?v=" + encodeURIComponent(build))
+      .then(function (reg) {
+        if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+        reg.addEventListener("updatefound", function () {
+          var installing = reg.installing;
+          if (!installing) return;
+          installing.addEventListener("statechange", function () {
+            if (installing.state === "installed" && navigator.serviceWorker.controller) {
+              installing.postMessage({ type: "SKIP_WAITING" });
+            }
+          });
+        });
+      })
+      .catch(function () {});
+
+    var reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    });
+  }
 
   function $(id) {
     return document.getElementById(id);
@@ -1921,5 +1975,12 @@
     refreshNetworkUi();
   }
 
-  init();
+  function boot() {
+    init();
+  }
+
+  ensureFreshBuild(function () {
+    registerServiceWorker();
+    boot();
+  });
 })();
