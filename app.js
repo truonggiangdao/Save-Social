@@ -3,6 +3,7 @@
 
   var STORAGE_KEY = "saveSocialLibrary_v1";
   var THEME_KEY = "saveSocialTheme_v1";
+  var DELETED_TAGS_KEY = "saveSocialDeletedTags_v1";
   var DEFAULT_ACCENT = "#0b84c4";
   var THEME_PRESETS = [
     { id: "ocean", label: "Xanh dương", hex: "#0b84c4" },
@@ -30,12 +31,14 @@
     formTagAddOpen: false,
     formInfoOpen: false,
     editTitleTouched: false,
+    deletedTags: [],
   };
 
   var editAutoTitleTimer = null;
   var TAG_LONG_PRESS_MS = 520;
   var tagLongPressTimer = null;
   var tagLongPressHandled = false;
+  var tagDeleteMenuSuppressUntil = 0;
   var headerQuickAddBusy = false;
   var BUILD_STORAGE_KEY = "saveSocialBuild_v1";
 
@@ -439,6 +442,37 @@
     return t.trim().replace(/\s+/g, " ");
   }
 
+  function loadDeletedTags() {
+    try {
+      var raw = localStorage.getItem(DELETED_TAGS_KEY);
+      if (!raw) return [];
+      var data = JSON.parse(raw);
+      if (!Array.isArray(data)) return [];
+      var out = [];
+      data.forEach(function (t) {
+        var n = normalizeTag(t);
+        if (n && out.indexOf(n) === -1) out.push(n);
+      });
+      return out;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function persistDeletedTags() {
+    try {
+      localStorage.setItem(DELETED_TAGS_KEY, JSON.stringify(state.deletedTags));
+    } catch (e) {}
+  }
+
+  function isTagDeleted(tag) {
+    var n = normalizeTag(tag);
+    if (!n) return false;
+    return state.deletedTags.some(function (t) {
+      return normalizeTag(t) === n;
+    });
+  }
+
   function uniqueTagsFromItems() {
     var set = {};
     state.items.forEach(function (item) {
@@ -456,7 +490,8 @@
     var fromItems = uniqueTagsFromItems();
     var merged = {};
     PRESET_TAGS.forEach(function (t) {
-      merged[normalizeTag(t)] = true;
+      var n = normalizeTag(t);
+      if (n && !isTagDeleted(n)) merged[n] = true;
     });
     fromItems.forEach(function (t) {
       merged[t] = true;
@@ -1039,7 +1074,7 @@
     var base = [];
     function addBase(tag) {
       var n = normalizeTag(tag);
-      if (!n || set[n]) return;
+      if (!n || set[n] || isTagDeleted(n)) return;
       set[n] = true;
       base.push(n);
     }
@@ -1067,6 +1102,11 @@
   function deleteTagGlobally(tag) {
     var n = normalizeTag(tag);
     if (!n) return;
+    if (!isTagDeleted(n)) {
+      state.deletedTags.push(n);
+      persistDeletedTags();
+    }
+    if (state.filterTag === n) state.filterTag = null;
     state.items = state.items.map(function (item) {
       var tags = (item.tags || []).filter(function (t) {
         return normalizeTag(t) !== n;
@@ -1108,7 +1148,9 @@
     menu.appendChild(btn);
     menu.style.position = "fixed";
     menu.style.visibility = "hidden";
-    document.body.appendChild(menu);
+    var modalPanel = document.querySelector(".modal__panel");
+    (modalPanel || document.body).appendChild(menu);
+    tagDeleteMenuSuppressUntil = Date.now() + 450;
     var mw = menu.offsetWidth;
     var mh = menu.offsetHeight;
     menu.style.visibility = "visible";
@@ -1145,9 +1187,10 @@
         showTagDeleteMenu(btn, tag);
       }, TAG_LONG_PRESS_MS);
     });
-    btn.addEventListener("pointerup", clearPress);
+    btn.addEventListener("pointerup", function (e) {
+      if (e.pointerId !== undefined && tagLongPressTimer) clearPress();
+    });
     btn.addEventListener("pointercancel", clearPress);
-    btn.addEventListener("pointerleave", clearPress);
   }
 
   function closeFormInfoPopover() {
@@ -1241,6 +1284,12 @@
   function addFormTag(tag) {
     var n = normalizeTag(tag);
     if (!n) return;
+    if (isTagDeleted(n)) {
+      state.deletedTags = state.deletedTags.filter(function (t) {
+        return normalizeTag(t) !== n;
+      });
+      persistDeletedTags();
+    }
     if (state.formTags.indexOf(n) === -1) {
       state.formTags.push(n);
       renderFormTagChips();
@@ -1741,6 +1790,7 @@
 
   function init() {
     state.items = load();
+    state.deletedTags = loadDeletedTags();
     persist();
 
     $("btnQuickAdd").addEventListener("click", function (e) {
@@ -1853,10 +1903,12 @@
       });
     });
 
-    document.addEventListener("click", function () {
+    document.addEventListener("click", function (e) {
+      if (Date.now() < tagDeleteMenuSuppressUntil) return;
+      if (e.target.closest("#formTagDeleteMenu")) return;
+      closeTagDeleteMenu();
       closeSortMenu();
       closeAllCardMenus();
-      closeTagDeleteMenu();
       closeFormInfoPopover();
       closeAppMenu();
     });
