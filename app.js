@@ -19,8 +19,6 @@
     { id: "black", label: "Đen", hex: "#000000" },
   ];
   var PRESET_TAGS = ["Nấu ăn", "Tập thể dục", "Con cái", "Mẹo sống"];
-  var SWIPE_DELETE_W = 88;
-
   var state = {
     items: [],
     filterTag: null,
@@ -709,7 +707,6 @@
     if (!p || !b) return;
     var willOpen = p.hidden;
     closeAllCardMenus();
-    closeAllCardSwipes();
     if (willOpen) {
       p.hidden = false;
       b.setAttribute("aria-expanded", "true");
@@ -727,16 +724,6 @@
     });
     document.querySelectorAll(".card__more").forEach(function (btn) {
       btn.setAttribute("aria-expanded", "false");
-    });
-  }
-
-  function closeAllCardSwipes() {
-    document.querySelectorAll(".card-swipe__front").forEach(function (f) {
-      f.style.transform = "";
-      f.classList.remove("card-swipe__front--dragging");
-    });
-    document.querySelectorAll(".card-li").forEach(function (li) {
-      li.classList.remove("card-li--swipe-open");
     });
   }
 
@@ -950,7 +937,6 @@
     var open = m.hidden;
     closeSortMenu();
     closeAllCardMenus();
-    closeAllCardSwipes();
     if (open) {
       m.hidden = false;
       b.setAttribute("aria-expanded", "true");
@@ -983,7 +969,6 @@
     }
     closeSortMenu();
     closeAllCardMenus();
-    closeAllCardSwipes();
     closeAppMenu();
   }
 
@@ -1130,18 +1115,25 @@
     });
   }
 
-  function quickAddFromHeader() {
+  function quickAddFromHeader(urlOverride) {
     var input = $("headerUrlInput");
     var btn = $("btnQuickAdd");
-    var raw = input ? input.value.trim() : "";
+    if (btn && btn.disabled) return;
+    var raw =
+      typeof urlOverride === "string"
+        ? urlOverride.trim()
+        : input
+          ? input.value.trim()
+          : "";
     if (!raw) {
-      showToast("Dán link vào ô");
+      showToast("Chưa có link — sao chép link rồi chạm ô");
       return;
     }
     try {
       new URL(raw);
     } catch (e) {
       showToast("URL không hợp lệ");
+      if (input) input.value = "";
       return;
     }
     if (btn) btn.disabled = true;
@@ -1172,6 +1164,30 @@
       })
       .finally(function () {
         if (btn) btn.disabled = false;
+      });
+  }
+
+  function pasteAndQuickAddFromHeader() {
+    var btn = $("btnQuickAdd");
+    if (btn && btn.disabled) return;
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      showToast("Trình duyệt không hỗ trợ dán tự động");
+      return;
+    }
+    navigator.clipboard
+      .readText()
+      .then(function (text) {
+        var raw = (text || "").trim();
+        if (!raw) {
+          showToast("Chưa có link trong clipboard");
+          return;
+        }
+        var input = $("headerUrlInput");
+        if (input) input.value = raw;
+        quickAddFromHeader(raw);
+      })
+      .catch(function () {
+        showToast("Cho phép truy cập clipboard để dán");
       });
   }
 
@@ -1215,87 +1231,6 @@
     if (searchBundle) wrap.appendChild(searchBundle);
   }
 
-  function bindCardSwipe(frontEl, deleteBtn, liWrap, item) {
-    var DELETE_W = SWIPE_DELETE_W;
-    var startX = 0;
-    var startTx = 0;
-    var pid = null;
-    var dragging = false;
-
-    function currentTx() {
-      var m = frontEl.style.transform.match(/translateX\((-?[0-9.]+)px\)/);
-      return m ? parseFloat(m[1], 10) : 0;
-    }
-
-    function setTx(px) {
-      var v = Math.min(0, Math.max(px, -DELETE_W));
-      frontEl.style.transform = "translateX(" + v + "px)";
-      liWrap.classList.toggle("card-li--swipe-open", v <= -8);
-    }
-
-    deleteBtn.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      performDeleteItem(item.id);
-    });
-
-    frontEl.addEventListener("pointerdown", function (e) {
-      if (e.button !== 0) return;
-      if (e.target.closest("a[href]")) return;
-      if (e.target.closest(".card__reorder")) return;
-      if (e.target.closest(".card__more")) return;
-      if (e.target.closest(".card__dropdown")) return;
-      if (e.target.closest("button")) return;
-      closeAllCardMenus();
-      closeSortMenu();
-      frontEl.style.transition = "none";
-      pid = e.pointerId;
-      startX = e.clientX;
-      startTx = currentTx();
-      dragging = true;
-      frontEl.classList.add("card-swipe__front--dragging");
-      try {
-        frontEl.setPointerCapture(e.pointerId);
-      } catch (ex) {}
-    });
-
-    frontEl.addEventListener("pointermove", function (e) {
-      if (!dragging || e.pointerId !== pid) return;
-      var dx = e.clientX - startX;
-      setTx(startTx + dx);
-    });
-
-    function endSwipeDrag(e) {
-      if (e.pointerId !== pid) return;
-      dragging = false;
-      try {
-        frontEl.releasePointerCapture(e.pointerId);
-      } catch (ex) {}
-      pid = null;
-      frontEl.classList.remove("card-swipe__front--dragging");
-      frontEl.style.transition = "transform 0.22s ease";
-      var tx = currentTx();
-      if (tx < -DELETE_W / 2) setTx(-DELETE_W);
-      else setTx(0);
-    }
-
-    frontEl.addEventListener("pointerup", endSwipeDrag);
-    frontEl.addEventListener("pointercancel", function (e) {
-      if (!dragging || e.pointerId !== pid) return;
-      dragging = false;
-      var cap = pid;
-      pid = null;
-      frontEl.classList.remove("card-swipe__front--dragging");
-      frontEl.style.transition = "transform 0.22s ease";
-      setTx(0);
-      if (cap != null) {
-        try {
-          frontEl.releasePointerCapture(cap);
-        } catch (ex2) {}
-      }
-    });
-  }
-
   function renderList() {
     var listEl = $("itemList");
     var emptyEl = $("emptyState");
@@ -1327,17 +1262,8 @@
       li.className = "card-li" + (item.pinned ? " card-li--pinned" : "");
       li.dataset.itemId = item.id;
 
-      var swipe = document.createElement("div");
-      swipe.className = "card-swipe";
-
-      var delBtn = document.createElement("button");
-      delBtn.type = "button";
-      delBtn.className = "card-swipe__delete";
-      delBtn.textContent = "Xóa";
-      delBtn.setAttribute("aria-label", "Xóa mục này");
-
-      var front = document.createElement("div");
-      front.className = "card-swipe__front card card--row";
+      var card = document.createElement("div");
+      card.className = "card card--row";
 
       var src = detectSource(item.url);
       var tw = thumbWrapForUrl(item.url);
@@ -1349,7 +1275,7 @@
         grab.setAttribute("aria-label", "Kéo để đổi vị trí");
         grab.innerHTML = "⋮⋮";
         bindReorderHandle(grab, item.id, listEl);
-        front.appendChild(grab);
+        card.appendChild(grab);
       }
 
       var cluster = document.createElement("div");
@@ -1448,10 +1374,7 @@
 
       cluster.appendChild(main);
 
-      front.appendChild(cluster);
-
-      swipe.appendChild(delBtn);
-      swipe.appendChild(front);
+      card.appendChild(cluster);
 
       var menuWrap = document.createElement("div");
       menuWrap.className = "card__menu-wrap card__menu-wrap--float";
@@ -1467,10 +1390,10 @@
       dropdown.hidden = true;
       dropdown.setAttribute("role", "menu");
 
-      function addMenuItem(label, fn) {
+      function addMenuItem(label, fn, itemClass) {
         var m = document.createElement("button");
         m.type = "button";
-        m.className = "card__dropdown-item";
+        m.className = "card__dropdown-item" + (itemClass ? " " + itemClass : "");
         m.setAttribute("role", "menuitem");
         m.textContent = label;
         m.addEventListener("click", function (e) {
@@ -1494,13 +1417,19 @@
       addMenuItem(item.pinned ? "Bỏ ghim" : "Ghim lên đầu", function () {
         togglePinItem(item.id);
       });
+      addMenuItem(
+        "Xóa",
+        function () {
+          performDeleteItem(item.id);
+        },
+        "card__dropdown-item--danger"
+      );
 
       moreBtn.addEventListener("click", function (e) {
         e.stopPropagation();
         var willOpen = dropdown.hidden;
         closeAllCardMenus();
         closeSortMenu();
-        closeAllCardSwipes();
         if (willOpen) {
           dropdown.hidden = false;
           moreBtn.setAttribute("aria-expanded", "true");
@@ -1509,12 +1438,9 @@
 
       menuWrap.appendChild(moreBtn);
       menuWrap.appendChild(dropdown);
-      li.appendChild(swipe);
+      li.appendChild(card);
       li.appendChild(menuWrap);
       listEl.appendChild(li);
-
-      front.style.transition = "transform 0.22s ease";
-      bindCardSwipe(front, delBtn, li, item);
     });
 
     var stagger = 0;
@@ -1593,15 +1519,21 @@
 
     $("btnQuickAdd").addEventListener("click", function (e) {
       e.stopPropagation();
-      quickAddFromHeader();
+      var input = $("headerUrlInput");
+      if (input && input.value.trim()) quickAddFromHeader();
+      else pasteAndQuickAddFromHeader();
     });
 
-    $("headerUrlInput").addEventListener("keydown", function (e) {
-      if (e.key === "Enter") {
+    var headerUrlInput = $("headerUrlInput");
+    if (headerUrlInput) {
+      headerUrlInput.addEventListener("pointerdown", function (e) {
         e.preventDefault();
-        quickAddFromHeader();
-      }
-    });
+        pasteAndQuickAddFromHeader();
+      });
+      headerUrlInput.addEventListener("focus", function () {
+        headerUrlInput.blur();
+      });
+    }
 
     $("itemForm").addEventListener("click", function (e) {
       var addChip = e.target.closest(".form-tag-chip--add");
@@ -1649,7 +1581,6 @@
     document.addEventListener("click", function () {
       closeSortMenu();
       closeAllCardMenus();
-      closeAllCardSwipes();
       closeAppMenu();
     });
 
@@ -1786,7 +1717,6 @@
         else {
           closeSortMenu();
           closeAllCardMenus();
-          closeAllCardSwipes();
           if (state.searchExpanded) setSearchExpanded(false);
         }
       }

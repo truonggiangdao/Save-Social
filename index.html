@@ -42,10 +42,12 @@
             type="url"
             id="headerUrlInput"
             class="input header__url-input"
-            placeholder="Dán link rồi nhấn +"
+            placeholder="Chạm để dán link"
             autocomplete="off"
-            inputmode="url"
-            enterkeyhint="done"
+            inputmode="none"
+            readonly
+            tabindex="0"
+            aria-label="Dán link từ clipboard"
           />
           <button type="button" id="btnQuickAdd" class="toolbar__icon-btn" title="Thêm nhanh" aria-label="Thêm link đã dán">
             <svg class="toolbar__svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
