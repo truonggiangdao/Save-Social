@@ -28,10 +28,15 @@
     formTags: [],
     searchExpanded: false,
     formTagAddOpen: false,
+    formInfoOpen: false,
     editTitleTouched: false,
   };
 
   var editAutoTitleTimer = null;
+  var TAG_LONG_PRESS_MS = 520;
+  var tagLongPressTimer = null;
+  var tagLongPressHandled = false;
+  var headerQuickAddBusy = false;
 
   function $(id) {
     return document.getElementById(id);
@@ -817,7 +822,7 @@
       return;
     }
     var tw = thumbWrapForUrl(url);
-    var t = title || suggestTitleLocal(url);
+    var previewTitle = title || suggestTitleLocal(url);
     var editingItem =
       state.editingId &&
       state.items.find(function (x) {
@@ -868,7 +873,7 @@
     main.className = "form-preview__main";
     var h = document.createElement("div");
     h.className = "form-preview__title";
-    h.textContent = t;
+    h.textContent = previewTitle;
     main.appendChild(h);
     var meta = document.createElement("div");
     meta.className = "form-preview__meta";
@@ -956,8 +961,11 @@
     $("editId").value = "";
     state.formTags = [];
     state.formTagAddOpen = false;
+    state.formInfoOpen = false;
     state.editTitleTouched = false;
     setFormUrlGroupVisible(false);
+    closeTagDeleteMenu();
+    closeFormInfoPopover();
     var tagWrap = $("formTagInputWrap");
     if (tagWrap) tagWrap.hidden = true;
     renderFormTagChips();
@@ -974,19 +982,163 @@
 
   function tagsForFormPicker() {
     var set = {};
-    PRESET_TAGS.forEach(function (t) {
-      set[normalizeTag(t)] = true;
-    });
-    uniqueTagsFromItems().forEach(function (t) {
-      set[t] = true;
-    });
-    state.formTags.forEach(function (t) {
-      var n = normalizeTag(t);
-      if (n) set[n] = true;
-    });
-    return Object.keys(set).sort(function (a, b) {
+    var base = [];
+    function addBase(tag) {
+      var n = normalizeTag(tag);
+      if (!n || set[n]) return;
+      set[n] = true;
+      base.push(n);
+    }
+    PRESET_TAGS.forEach(addBase);
+    uniqueTagsFromItems().forEach(addBase);
+    base.sort(function (a, b) {
       return a.localeCompare(b, "vi");
     });
+    var tail = [];
+    state.formTags.forEach(function (t) {
+      var n = normalizeTag(t);
+      if (n && !set[n]) {
+        set[n] = true;
+        tail.push(n);
+      }
+    });
+    return base.concat(tail);
+  }
+
+  function closeTagDeleteMenu() {
+    var menu = $("formTagDeleteMenu");
+    if (menu) menu.remove();
+  }
+
+  function deleteTagGlobally(tag) {
+    var n = normalizeTag(tag);
+    if (!n) return;
+    state.items = state.items.map(function (item) {
+      var tags = (item.tags || []).filter(function (t) {
+        return normalizeTag(t) !== n;
+      });
+      if (tags.length === (item.tags || []).length) return item;
+      var o = {};
+      for (var k in item) o[k] = item[k];
+      o.tags = tags;
+      return o;
+    });
+    state.formTags = state.formTags.filter(function (t) {
+      return normalizeTag(t) !== n;
+    });
+    persist();
+    closeTagDeleteMenu();
+    renderFormTagChips();
+    render();
+    showToast("Đã xóa thẻ");
+  }
+
+  function showTagDeleteMenu(anchorEl, tag) {
+    closeTagDeleteMenu();
+    var menu = document.createElement("div");
+    menu.id = "formTagDeleteMenu";
+    menu.className = "form-tag-delete-menu";
+    menu.setAttribute("role", "menu");
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "form-tag-delete-menu__item";
+    btn.setAttribute("role", "menuitem");
+    btn.textContent = "Xóa thẻ";
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      deleteTagGlobally(tag);
+    });
+    menu.addEventListener("click", function (e) {
+      e.stopPropagation();
+    });
+    menu.appendChild(btn);
+    menu.style.position = "fixed";
+    menu.style.visibility = "hidden";
+    document.body.appendChild(menu);
+    var mw = menu.offsetWidth;
+    var mh = menu.offsetHeight;
+    menu.style.visibility = "visible";
+    var rect = anchorEl.getBoundingClientRect();
+    var top = rect.bottom + 6;
+    var left = Math.min(rect.left, window.innerWidth - mw - 8);
+    if (top + mh > window.innerHeight - 8) {
+      top = Math.max(8, rect.top - mh - 6);
+    }
+    menu.style.top = top + "px";
+    menu.style.left = Math.max(8, left) + "px";
+  }
+
+  function bindTagChipLongPress(btn, tag) {
+    function clearPress() {
+      if (tagLongPressTimer) {
+        clearTimeout(tagLongPressTimer);
+        tagLongPressTimer = null;
+      }
+    }
+    btn.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0) return;
+      tagLongPressHandled = false;
+      clearPress();
+      try {
+        btn.setPointerCapture(e.pointerId);
+      } catch (ex) {}
+      tagLongPressTimer = setTimeout(function () {
+        tagLongPressTimer = null;
+        tagLongPressHandled = true;
+        try {
+          btn.releasePointerCapture(e.pointerId);
+        } catch (ex) {}
+        showTagDeleteMenu(btn, tag);
+      }, TAG_LONG_PRESS_MS);
+    });
+    btn.addEventListener("pointerup", clearPress);
+    btn.addEventListener("pointercancel", clearPress);
+    btn.addEventListener("pointerleave", clearPress);
+  }
+
+  function closeFormInfoPopover() {
+    if (!state.formInfoOpen) return;
+    state.formInfoOpen = false;
+    syncFormInfoUi();
+  }
+
+  function positionFormInfoPopover() {
+    var btn = $("btnToggleNote");
+    var pop = $("formInfoPopover");
+    if (!btn || !pop || pop.hidden) return;
+    pop.style.visibility = "hidden";
+    pop.style.top = "0";
+    pop.style.left = "0";
+    var mw = pop.offsetWidth;
+    var mh = pop.offsetHeight;
+    var rect = btn.getBoundingClientRect();
+    var top = rect.bottom + 6;
+    var left = rect.right - mw;
+    left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
+    if (top + mh > window.innerHeight - 8) {
+      top = Math.max(8, rect.top - mh - 6);
+    }
+    pop.style.top = top + "px";
+    pop.style.left = left + "px";
+    pop.style.visibility = "visible";
+  }
+
+  function syncFormInfoUi() {
+    var btn = $("btnToggleNote");
+    var pop = $("formInfoPopover");
+    if (!btn || !pop) return;
+    pop.hidden = !state.formInfoOpen;
+    pop.setAttribute("aria-hidden", state.formInfoOpen ? "false" : "true");
+    btn.setAttribute("aria-expanded", state.formInfoOpen ? "true" : "false");
+    btn.classList.toggle("is-active", state.formInfoOpen);
+    if (state.formInfoOpen) {
+      requestAnimationFrame(positionFormInfoPopover);
+    }
+  }
+
+  function setFormInfoOpen(open) {
+    state.formInfoOpen = !!open;
+    syncFormInfoUi();
   }
 
   function renderFormTagChips() {
@@ -998,6 +1150,10 @@
         return normalizeTag(t) === tag;
       });
       function toggleTag() {
+        if (tagLongPressHandled) {
+          tagLongPressHandled = false;
+          return;
+        }
         var i = -1;
         state.formTags.forEach(function (t, idx) {
           if (normalizeTag(t) === tag) i = idx;
@@ -1006,42 +1162,14 @@
         else state.formTags.splice(i, 1);
         renderFormTagChips();
       }
-      function removeTagChip(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        state.formTags = state.formTags.filter(function (t) {
-          return normalizeTag(t) !== normalizeTag(tag);
-        });
-        renderFormTagChips();
-      }
-      if (selected) {
-        var row = document.createElement("span");
-        row.className = "form-tag-chip-wrap";
-        var btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "chip form-tag-chip is-active";
-        btn.textContent = tag;
-        btn.setAttribute("aria-pressed", "true");
-        btn.addEventListener("click", toggleTag);
-        var rm = document.createElement("button");
-        rm.type = "button";
-        rm.className = "form-tag-chip__remove";
-        rm.setAttribute("aria-label", "Gỡ thẻ " + tag);
-        rm.title = "Gỡ thẻ";
-        rm.textContent = "\u00d7";
-        rm.addEventListener("click", removeTagChip);
-        row.appendChild(btn);
-        row.appendChild(rm);
-        wrap.appendChild(row);
-      } else {
-        var btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "chip form-tag-chip";
-        btn.textContent = tag;
-        btn.setAttribute("aria-pressed", "false");
-        btn.addEventListener("click", toggleTag);
-        wrap.appendChild(btn);
-      }
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chip form-tag-chip" + (selected ? " is-active" : "");
+      btn.textContent = tag;
+      btn.setAttribute("aria-pressed", selected ? "true" : "false");
+      btn.addEventListener("click", toggleTag);
+      bindTagChipLongPress(btn, tag);
+      wrap.appendChild(btn);
     });
 
     var addBtn = document.createElement("button");
@@ -1115,11 +1243,41 @@
     });
   }
 
+  function getHeaderUrlValue() {
+    var el = $("headerUrlInput");
+    if (!el) return "";
+    return (el.textContent || "").replace(/\s+/g, " ").trim();
+  }
+
+  function clearHeaderUrlValue() {
+    var el = $("headerUrlInput");
+    if (!el) return;
+    el.textContent = "";
+    el.innerHTML = "";
+  }
+
+  function setHeaderUrlValue(text) {
+    var el = $("headerUrlInput");
+    if (!el) return;
+    el.textContent = text || "";
+  }
+
+  function selectAllHeaderUrl() {
+    var el = $("headerUrlInput");
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
   function quickAddFromHeader() {
-    var input = $("headerUrlInput");
+    if (headerQuickAddBusy) return;
     var btn = $("btnQuickAdd");
-    if (btn && btn.disabled) return;
-    var raw = input ? input.value.trim() : "";
+    var raw = getHeaderUrlValue();
     if (!raw) {
       showToast("Dán link vào ô rồi nhấn +");
       return;
@@ -1128,10 +1286,12 @@
       new URL(raw);
     } catch (e) {
       showToast("URL không hợp lệ");
-      if (input) input.value = "";
+      clearHeaderUrlValue();
       return;
     }
+    headerQuickAddBusy = true;
     if (btn) btn.disabled = true;
+    clearHeaderUrlValue();
     resolveQuickTitle(raw)
       .then(function (title) {
         var tags = [];
@@ -1149,15 +1309,16 @@
           pinned: false,
         });
         persist();
-        if (input) input.value = "";
         render();
         if (detectSource(raw) === "facebook") queueFacebookThumbFetch(newId);
         showToast("Đã lưu");
       })
       .catch(function () {
+        setHeaderUrlValue(raw);
         showToast("Không thêm được — thử lại");
       })
       .finally(function () {
+        headerQuickAddBusy = false;
         if (btn) btn.disabled = false;
       });
   }
@@ -1467,7 +1628,9 @@
     $("noteInput").value = item.note || "";
     state.formTags = (item.tags || []).slice();
     state.formTagAddOpen = false;
+    state.formInfoOpen = false;
     state.editTitleTouched = false;
+    syncFormInfoUi();
     renderFormTagChips();
     updateSourceBadge();
     openModal();
@@ -1495,27 +1658,44 @@
 
     var headerUrlInput = $("headerUrlInput");
     if (headerUrlInput) {
-      function anchorHeaderUrlEditMenu() {
+      headerUrlInput.addEventListener("paste", function (e) {
+        e.preventDefault();
+        var text = e.clipboardData ? e.clipboardData.getData("text/plain") : "";
+        if (!text) return;
+        if (document.queryCommandSupported("insertText")) {
+          document.execCommand("insertText", false, text);
+        } else {
+          headerUrlInput.textContent = text;
+        }
+      });
+
+      headerUrlInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          quickAddFromHeader();
+        }
+      });
+
+      headerUrlInput.addEventListener("focus", function () {
         requestAnimationFrame(function () {
-          var len = headerUrlInput.value.length;
-          try {
-            if (len) headerUrlInput.setSelectionRange(0, len);
-            else headerUrlInput.setSelectionRange(0, 0);
-          } catch (err) {}
-        });
-      }
-
-      headerUrlInput.addEventListener(
-        "touchstart",
-        function () {
-          if (document.activeElement !== headerUrlInput) {
-            headerUrlInput.focus({ preventScroll: true });
+          if (getHeaderUrlValue()) {
+            selectAllHeaderUrl();
+            return;
           }
-        },
-        { passive: true }
-      );
+          var range = document.createRange();
+          range.setStart(headerUrlInput, 0);
+          range.collapse(true);
+          var sel = window.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        });
+      });
 
-      headerUrlInput.addEventListener("focus", anchorHeaderUrlEditMenu);
+      headerUrlInput.addEventListener("blur", function () {
+        if (!getHeaderUrlValue()) clearHeaderUrlValue();
+      });
     }
 
     $("itemForm").addEventListener("click", function (e) {
@@ -1533,6 +1713,26 @@
     $("modalClose").addEventListener("click", closeModal);
     $("modalBackdrop").addEventListener("click", closeModal);
     $("btnCancel").addEventListener("click", closeModal);
+
+    var formInfoPopover = $("formInfoPopover");
+    if (formInfoPopover) {
+      formInfoPopover.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+    }
+
+    $("btnToggleNote").addEventListener("click", function (e) {
+      e.stopPropagation();
+      setFormInfoOpen(!state.formInfoOpen);
+    });
+
+    window.addEventListener(
+      "resize",
+      function () {
+        if (state.formInfoOpen) positionFormInfoPopover();
+      },
+      { passive: true }
+    );
 
     $("btnToggleSearch").addEventListener("click", function (e) {
       e.stopPropagation();
@@ -1564,6 +1764,8 @@
     document.addEventListener("click", function () {
       closeSortMenu();
       closeAllCardMenus();
+      closeTagDeleteMenu();
+      closeFormInfoPopover();
       closeAppMenu();
     });
 
@@ -1695,11 +1897,15 @@
 
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") {
-        if (!$("modal").hidden) closeModal();
-        else if ($("appMenu") && !$("appMenu").hidden) closeAppMenu();
+        if (!$("modal").hidden) {
+          if (state.formInfoOpen) closeFormInfoPopover();
+          else closeModal();
+        } else if ($("appMenu") && !$("appMenu").hidden) closeAppMenu();
         else {
           closeSortMenu();
           closeAllCardMenus();
+          closeTagDeleteMenu();
+          closeFormInfoPopover();
           if (state.searchExpanded) setSearchExpanded(false);
         }
       }

@@ -103,12 +103,31 @@ body {
   width: 100%;
   min-height: var(--touch-min);
   font-size: 16px;
-  resize: none;
-  overflow: hidden;
   line-height: 1.35;
   -webkit-user-select: text;
   user-select: text;
   touch-action: manipulation;
+}
+
+.header__url-paste {
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-user-modify: read-write-plaintext-only;
+  user-select: text;
+  cursor: text;
+}
+
+.header__url-paste:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.header__url-paste:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
 }
 
 .btn {
@@ -237,6 +256,24 @@ body {
     border-color: var(--accent);
     color: var(--accent);
   }
+
+  .toolbar__icon-btn--quick-add:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
+
+.toolbar__icon-btn--quick-add:active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.toolbar__icon-btn--quick-add:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .toolbar__icon-btn.is-active {
@@ -1049,6 +1086,78 @@ body.is-reordering {
   font-weight: 600;
 }
 
+.form__title-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.form__title-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-note-info-btn {
+  flex-shrink: 0;
+  width: var(--touch-min);
+  min-height: var(--touch-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fafbfc;
+  color: var(--text-muted);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.form-note-info-btn.is-active,
+.form-note-info-btn.has-note {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+@media (hover: hover) {
+  .form-note-info-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
+
+.form-note-info-btn:active {
+  background: var(--accent-soft);
+}
+
+.form-note-info-btn__svg {
+  display: block;
+}
+
+.form-info-popover {
+  position: fixed;
+  z-index: 220;
+  max-width: min(18rem, calc(100vw - 1.5rem));
+  padding: 0.65rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+}
+
+.form-info-popover[hidden] {
+  display: none !important;
+}
+
+.form-info-popover__text {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
 .form__group {
   margin-bottom: 1rem;
 }
@@ -1095,8 +1204,15 @@ body.is-reordering {
   width: 100%;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.3rem;
   align-items: center;
+}
+
+.form-tag-chips .chip,
+.form-tag-chips .form-tag-chip {
+  font-size: 0.8125rem;
+  padding: 0.3rem 0.62rem;
+  min-height: 2rem;
 }
 
 .form-tag-chip.chip.is-active {
@@ -1108,34 +1224,34 @@ body.is-reordering {
   font-weight: 600;
 }
 
-.form-tag-chip-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
+.form-tag-delete-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 7.5rem;
+  padding: 0.25rem 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
 }
 
-.form-tag-chip__remove {
-  font-family: inherit;
-  font-size: 1.05rem;
-  line-height: 1;
-  width: 2.25rem;
-  min-height: 2.25rem;
-  padding: 0;
-  flex-shrink: 0;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-muted);
+.form-tag-delete-menu__item {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  color: var(--danger);
   cursor: pointer;
   touch-action: manipulation;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 @media (hover: hover) {
-  .form-tag-chip__remove:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-soft);
+  .form-tag-delete-menu__item:hover {
+    background: var(--danger-soft);
   }
 }
 
@@ -1144,9 +1260,9 @@ body.is-reordering {
 }
 
 .input--tag-inline {
-  min-height: 2.5rem;
-  font-size: 0.9375rem;
-  padding: 0.45rem 0.6rem;
+  min-height: 2rem;
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.55rem;
 }
 
 .input--note-compact {

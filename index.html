@@ -38,20 +38,18 @@
         </div>
         <div class="header__add-slot">
           <div class="header__url-wrap">
-            <textarea
+            <div
               id="headerUrlInput"
-              class="input header__url-input"
-              rows="1"
-              placeholder="Dán link rồi nhấn +"
-              autocomplete="off"
-              autocapitalize="off"
-              autocorrect="off"
+              class="input header__url-input header__url-paste"
+              contenteditable="true"
+              role="textbox"
+              tabindex="0"
               spellcheck="false"
-              readonly
+              data-placeholder="Dán link rồi nhấn +"
               aria-label="Dán link — chạm để dán hoặc chọn tất cả"
-            ></textarea>
+            ></div>
           </div>
-          <button type="button" id="btnQuickAdd" class="toolbar__icon-btn" title="Thêm nhanh" aria-label="Thêm link đã dán">
+          <button type="button" id="btnQuickAdd" class="toolbar__icon-btn toolbar__icon-btn--quick-add" title="Thêm nhanh" aria-label="Thêm link đã dán">
             <svg class="toolbar__svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
               <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             </svg>
@@ -201,17 +199,49 @@
       <form id="itemForm" class="form">
         <input type="hidden" id="editId" value="" />
         <div class="form__group" id="formUrlGroup" hidden>
-          <label for="urlInput">URL <span class="req">*</span></label>
+          <label class="visually-hidden" for="urlInput">URL</label>
           <input type="url" id="urlInput" class="input" placeholder="https://…" />
           <div class="form__meta">
             <span class="badge" id="sourceBadge">—</span>
-            <span id="fetchHint" class="form__hint">Tiêu đề cập nhật tự động khi mở và khi đổi URL.</span>
           </div>
         </div>
         <div class="form__group">
-          <label for="titleInput">Tiêu đề <span class="req">*</span></label>
-          <input type="text" id="titleInput" class="input" required maxlength="300" />
+          <label class="visually-hidden" for="titleInput">Tiêu đề</label>
+          <div class="form__title-row">
+            <input
+              type="text"
+              id="titleInput"
+              class="input form__title-input"
+              required
+              maxlength="300"
+              placeholder="Tiêu đề"
+            />
+            <button
+              type="button"
+              id="btnToggleNote"
+              class="form-note-info-btn"
+              aria-label="Thông tin"
+              aria-expanded="false"
+              aria-controls="formInfoPopover"
+              title="Thông tin"
+            >
+              <svg class="form-note-info-btn__svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" />
+                <path d="M12 10v6M12 7h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
           <div id="formPreview" class="form-preview" hidden aria-live="polite"></div>
+        </div>
+        <div class="form__group">
+          <label for="noteInput">Ghi chú</label>
+          <textarea
+            id="noteInput"
+            class="input input--textarea input--note-compact"
+            rows="2"
+            maxlength="500"
+            placeholder="Tùy chọn…"
+          ></textarea>
         </div>
         <div class="form__group form__group--tags">
           <span class="label-block">Thẻ</span>
@@ -222,16 +252,18 @@
             </div>
           </div>
         </div>
-        <div class="form__group">
-          <label for="noteInput">Ghi chú</label>
-          <textarea id="noteInput" class="input input--textarea input--note-compact" rows="2" maxlength="500" placeholder="Tùy chọn…"></textarea>
-        </div>
         <div class="form__actions">
           <button type="button" class="btn btn--ghost" id="btnCancel">Hủy</button>
           <button type="submit" class="btn btn--primary" id="btnSave">Lưu</button>
         </div>
       </form>
     </div>
+  </div>
+
+  <div id="formInfoPopover" class="form-info-popover" hidden role="tooltip">
+    <p id="fetchHint" class="form-info-popover__text">
+      Tiêu đề cập nhật tự động khi mở và khi đổi URL.
+    </p>
   </div>
 
   <div class="toast" id="toast" hidden role="status"></div>
