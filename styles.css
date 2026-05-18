@@ -110,18 +110,8 @@ body {
 }
 
 .header__url-paste {
-  white-space: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-user-modify: read-write-plaintext-only;
-  user-select: text;
   cursor: text;
-}
-
-.header__url-paste:empty::before {
-  content: attr(data-placeholder);
-  color: var(--text-muted);
-  pointer-events: none;
+  text-overflow: ellipsis;
 }
 
 .header__url-paste:focus {

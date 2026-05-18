@@ -1300,32 +1300,28 @@
   function getHeaderUrlValue() {
     var el = $("headerUrlInput");
     if (!el) return "";
-    return (el.textContent || "").replace(/\s+/g, " ").trim();
+    return (el.value || "").trim();
   }
 
   function clearHeaderUrlValue() {
     var el = $("headerUrlInput");
-    if (!el) return;
-    el.textContent = "";
-    el.innerHTML = "";
+    if (el) el.value = "";
   }
 
   function setHeaderUrlValue(text) {
     var el = $("headerUrlInput");
-    if (!el) return;
-    el.textContent = text || "";
+    if (el) el.value = text || "";
   }
 
-  function selectAllHeaderUrl() {
+  function focusHeaderUrlInput() {
     var el = $("headerUrlInput");
     if (!el) return;
     el.focus({ preventScroll: true });
-    var range = document.createRange();
-    range.selectNodeContents(el);
-    var sel = window.getSelection();
-    if (!sel) return;
-    sel.removeAllRanges();
-    sel.addRange(range);
+    var len = el.value.length;
+    try {
+      if (len) el.setSelectionRange(0, len);
+      else el.setSelectionRange(0, 0);
+    } catch (err) {}
   }
 
   function quickAddFromHeader() {
@@ -1711,17 +1707,18 @@
     });
 
     var headerUrlInput = $("headerUrlInput");
+    var headerUrlWrap = document.querySelector(".header__url-wrap");
     if (headerUrlInput) {
-      headerUrlInput.addEventListener("paste", function (e) {
-        e.preventDefault();
-        var text = e.clipboardData ? e.clipboardData.getData("text/plain") : "";
-        if (!text) return;
-        if (document.queryCommandSupported("insertText")) {
-          document.execCommand("insertText", false, text);
-        } else {
-          headerUrlInput.textContent = text;
+      function onHeaderUrlPointerDown() {
+        if (document.activeElement !== headerUrlInput) {
+          focusHeaderUrlInput();
         }
-      });
+      }
+
+      if (headerUrlWrap) {
+        headerUrlWrap.addEventListener("touchstart", onHeaderUrlPointerDown, { passive: true });
+      }
+      headerUrlInput.addEventListener("touchstart", onHeaderUrlPointerDown, { passive: true });
 
       headerUrlInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter") {
@@ -1731,24 +1728,7 @@
       });
 
       headerUrlInput.addEventListener("focus", function () {
-        requestAnimationFrame(function () {
-          if (getHeaderUrlValue()) {
-            selectAllHeaderUrl();
-            return;
-          }
-          var range = document.createRange();
-          range.setStart(headerUrlInput, 0);
-          range.collapse(true);
-          var sel = window.getSelection();
-          if (sel) {
-            sel.removeAllRanges();
-            sel.addRange(range);
-          }
-        });
-      });
-
-      headerUrlInput.addEventListener("blur", function () {
-        if (!getHeaderUrlValue()) clearHeaderUrlValue();
+        requestAnimationFrame(focusHeaderUrlInput);
       });
     }
 

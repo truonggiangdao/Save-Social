@@ -8,16 +8,16 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Save Social" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="save-social-build" content="202605182" />
+  <meta name="save-social-build" content="202605183" />
   <meta http-equiv="Cache-Control" content="no-cache" />
   <title>Save Social</title>
-  <script src="version.js?v=202605182"></script>
-  <link rel="manifest" href="manifest.webmanifest?v=202605182" />
-  <link rel="icon" href="assets/favicon.ico?v=202605182" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=202605182" />
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=202605182" />
-  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=202605182" />
-  <link rel="stylesheet" href="styles.css?v=202605182" />
+  <script src="version.js?v=202605183"></script>
+  <link rel="manifest" href="manifest.webmanifest?v=202605183" />
+  <link rel="icon" href="assets/favicon.ico?v=202605183" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=202605183" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=202605183" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=202605183" />
+  <link rel="stylesheet" href="styles.css?v=202605183" />
 </head>
 <body>
   <div class="app">
@@ -41,16 +41,23 @@
         </div>
         <div class="header__add-slot">
           <div class="header__url-wrap">
-            <div
+            <input
+              type="text"
               id="headerUrlInput"
               class="input header__url-input header__url-paste"
-              contenteditable="true"
-              role="textbox"
-              tabindex="0"
+              placeholder="Dán link rồi nhấn +"
+              readonly
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
               spellcheck="false"
-              data-placeholder="Dán link rồi nhấn +"
-              aria-label="Dán link — chạm để dán hoặc chọn tất cả"
-            ></div>
+              data-1p-ignore="true"
+              data-lpignore="true"
+              data-form-type="other"
+              name="save-social-link-paste"
+              enterkeyhint="done"
+              aria-label="Dán link — chạm để dán"
+            />
           </div>
           <button type="button" id="btnQuickAdd" class="toolbar__icon-btn toolbar__icon-btn--quick-add" title="Thêm nhanh" aria-label="Thêm link đã dán">
             <svg class="toolbar__svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -271,6 +278,6 @@
 
   <div class="toast" id="toast" hidden role="status"></div>
 
-  <script src="app.js?v=202605182"></script>
+  <script src="app.js?v=202605183"></script>
 </body>
 </html>
