@@ -1300,28 +1300,70 @@
   function getHeaderUrlValue() {
     var el = $("headerUrlInput");
     if (!el) return "";
-    return (el.value || "").trim();
+    return (el.textContent || "").replace(/\s+/g, " ").trim();
   }
 
   function clearHeaderUrlValue() {
     var el = $("headerUrlInput");
-    if (el) el.value = "";
+    if (!el) return;
+    el.textContent = "";
+    el.innerHTML = "";
   }
 
   function setHeaderUrlValue(text) {
     var el = $("headerUrlInput");
-    if (el) el.value = text || "";
+    if (!el) return;
+    el.innerHTML = "";
+    el.textContent = (text || "").trim();
   }
 
-  function focusHeaderUrlInput() {
+  function normalizeHeaderUrlField() {
+    var el = $("headerUrlInput");
+    if (!el) return;
+    var plain = getHeaderUrlValue();
+    if (el.childNodes.length !== 1 || el.firstChild.nodeType !== 3) {
+      setHeaderUrlValue(plain);
+    }
+  }
+
+  function focusHeaderUrlField(selectAll) {
     var el = $("headerUrlInput");
     if (!el) return;
     el.focus({ preventScroll: true });
-    var len = el.value.length;
-    try {
-      if (len) el.setSelectionRange(0, len);
-      else el.setSelectionRange(0, 0);
-    } catch (err) {}
+    requestAnimationFrame(function () {
+      var len = (el.textContent || "").length;
+      if (!len) return;
+      if (selectAll !== false) {
+        var range = document.createRange();
+        range.selectNodeContents(el);
+        var sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }
+    });
+  }
+
+  function pasteIntoHeaderFromClipboard() {
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      showToast("Không đọc được clipboard — thử nhấn giữ ô để dán");
+      return Promise.resolve();
+    }
+    return navigator.clipboard
+      .readText()
+      .then(function (text) {
+        var raw = (text || "").trim();
+        if (!raw) {
+          showToast("Chưa có link trong clipboard");
+          return;
+        }
+        setHeaderUrlValue(raw);
+        focusHeaderUrlField(true);
+      })
+      .catch(function () {
+        showToast("Cho phép truy cập clipboard để dán");
+      });
   }
 
   function quickAddFromHeader() {
@@ -1707,18 +1749,34 @@
     });
 
     var headerUrlInput = $("headerUrlInput");
-    var headerUrlWrap = document.querySelector(".header__url-wrap");
-    if (headerUrlInput) {
-      function onHeaderUrlPointerDown() {
-        if (document.activeElement !== headerUrlInput) {
-          focusHeaderUrlInput();
-        }
-      }
+    var btnHeaderPaste = $("btnHeaderPaste");
+    if (btnHeaderPaste) {
+      btnHeaderPaste.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        pasteIntoHeaderFromClipboard();
+      });
+    }
 
-      if (headerUrlWrap) {
-        headerUrlWrap.addEventListener("touchstart", onHeaderUrlPointerDown, { passive: true });
-      }
-      headerUrlInput.addEventListener("touchstart", onHeaderUrlPointerDown, { passive: true });
+    if (headerUrlInput) {
+      headerUrlInput.addEventListener("paste", function (e) {
+        e.preventDefault();
+        var text = e.clipboardData ? e.clipboardData.getData("text/plain") : "";
+        if (!text) return;
+        setHeaderUrlValue(text);
+        focusHeaderUrlField(true);
+      });
+
+      headerUrlInput.addEventListener("input", normalizeHeaderUrlField);
+
+      headerUrlInput.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (getHeaderUrlValue()) {
+          focusHeaderUrlField(true);
+          return;
+        }
+        pasteIntoHeaderFromClipboard();
+      });
 
       headerUrlInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter") {
@@ -1727,8 +1785,8 @@
         }
       });
 
-      headerUrlInput.addEventListener("focus", function () {
-        requestAnimationFrame(focusHeaderUrlInput);
+      headerUrlInput.addEventListener("blur", function () {
+        if (!getHeaderUrlValue()) clearHeaderUrlValue();
       });
     }
 

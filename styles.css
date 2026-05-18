@@ -91,33 +91,99 @@ body {
   gap: 0.4rem;
 }
 
-.header__url-wrap {
+.header__url-form {
   flex: 1;
   min-width: 0;
   position: relative;
-  isolation: isolate;
 }
 
-.header__url-input {
-  display: block;
-  width: 100%;
-  min-height: var(--touch-min);
-  font-size: 16px;
-  line-height: 1.35;
-  -webkit-user-select: text;
-  user-select: text;
-  touch-action: manipulation;
+.header__url-decoy {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  left: -9999px;
 }
 
-.header__url-paste {
-  cursor: text;
-  text-overflow: ellipsis;
+.header__url-wrap {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: var(--touch-min);
+  max-height: var(--touch-min);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fafbfc;
+  overflow: hidden;
 }
 
-.header__url-paste:focus {
+.header__url-wrap:focus-within {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
   border-color: var(--accent);
+}
+
+.header__url-paste-btn {
+  flex-shrink: 0;
+  align-self: center;
+  height: 100%;
+  min-width: calc(var(--touch-min) * 2);
+  padding: 0 0.75rem;
+  border: none;
+  border-right: 1px solid var(--border);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.header__url-paste-btn:active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.header__url-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  max-height: var(--touch-min);
+  display: block;
+  font-size: 16px;
+  line-height: var(--touch-min);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0 0.7rem;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
+  cursor: text;
+  overflow: hidden;
+}
+
+.header__url-field {
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  -webkit-user-modify: read-write-plaintext-only;
+  word-break: normal;
+}
+
+.header__url-field:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.header__url-field:focus {
+  outline: none;
 }
 
 .btn {
