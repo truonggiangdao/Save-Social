@@ -1115,18 +1115,13 @@
     });
   }
 
-  function quickAddFromHeader(urlOverride) {
+  function quickAddFromHeader() {
     var input = $("headerUrlInput");
     var btn = $("btnQuickAdd");
     if (btn && btn.disabled) return;
-    var raw =
-      typeof urlOverride === "string"
-        ? urlOverride.trim()
-        : input
-          ? input.value.trim()
-          : "";
+    var raw = input ? input.value.trim() : "";
     if (!raw) {
-      showToast("Chưa có link — sao chép link rồi chạm ô");
+      showToast("Dán link vào ô rồi nhấn +");
       return;
     }
     try {
@@ -1164,30 +1159,6 @@
       })
       .finally(function () {
         if (btn) btn.disabled = false;
-      });
-  }
-
-  function pasteAndQuickAddFromHeader() {
-    var btn = $("btnQuickAdd");
-    if (btn && btn.disabled) return;
-    if (!navigator.clipboard || !navigator.clipboard.readText) {
-      showToast("Trình duyệt không hỗ trợ dán tự động");
-      return;
-    }
-    navigator.clipboard
-      .readText()
-      .then(function (text) {
-        var raw = (text || "").trim();
-        if (!raw) {
-          showToast("Chưa có link trong clipboard");
-          return;
-        }
-        var input = $("headerUrlInput");
-        if (input) input.value = raw;
-        quickAddFromHeader(raw);
-      })
-      .catch(function () {
-        showToast("Cho phép truy cập clipboard để dán");
       });
   }
 
@@ -1519,19 +1490,17 @@
 
     $("btnQuickAdd").addEventListener("click", function (e) {
       e.stopPropagation();
-      var input = $("headerUrlInput");
-      if (input && input.value.trim()) quickAddFromHeader();
-      else pasteAndQuickAddFromHeader();
+      quickAddFromHeader();
     });
 
     var headerUrlInput = $("headerUrlInput");
     if (headerUrlInput) {
-      headerUrlInput.addEventListener("pointerdown", function (e) {
-        e.preventDefault();
-        pasteAndQuickAddFromHeader();
-      });
       headerUrlInput.addEventListener("focus", function () {
-        headerUrlInput.blur();
+        var len = headerUrlInput.value.length;
+        if (!len) return;
+        try {
+          headerUrlInput.setSelectionRange(0, len);
+        } catch (err) {}
       });
     }
 
