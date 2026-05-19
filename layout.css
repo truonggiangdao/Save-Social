@@ -524,8 +524,16 @@ body.sidebar-open .sidebar,
   margin-bottom: 0;
 }
 
+.quick-save__row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
 .quick-save__form {
   position: relative;
+  flex: 1;
+  min-width: 0;
 }
 
 .quick-save__decoy {
@@ -537,44 +545,59 @@ body.sidebar-open .sidebar,
   left: -9999px;
 }
 
-.quick-save__field {
+.quick-save__url-wrap {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.4rem 0.35rem 0.55rem;
+  align-items: stretch;
+  min-height: 2.75rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.quick-save__url-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .quick-save__link-btn {
   flex-shrink: 0;
+  align-self: stretch;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
+  min-width: 3.25rem;
+  padding: 0 0.75rem;
   border: none;
-  border-radius: 10px;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
   background: var(--accent-soft);
   color: var(--accent);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+}
+
+.quick-save__link-btn:active {
+  background: var(--accent);
+  color: #fff;
 }
 
 .quick-save__input {
   flex: 1;
   min-width: 0;
   border: none;
+  box-shadow: none;
   background: transparent;
-  min-height: 2.25rem;
+  min-height: 2.75rem;
   font-size: 16px;
   font-family: inherit;
   color: var(--text);
-  padding: 0;
+  padding: 0.55rem 0.65rem;
 }
 
 .quick-save__input::placeholder {
@@ -590,13 +613,12 @@ body.sidebar-open .sidebar,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  min-width: 2.25rem;
-  min-height: 2.25rem;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  align-self: stretch;
   padding: 0;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--accent);
   color: #fff;
   cursor: pointer;

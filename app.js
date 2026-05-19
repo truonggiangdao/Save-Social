@@ -2535,6 +2535,7 @@
       headerUrlInput.addEventListener("paste", function () {
         requestAnimationFrame(function () {
           setHeaderUrlValue(headerUrlInput.value);
+          blurHeaderUrlInput();
         });
       });
 
