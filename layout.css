@@ -598,6 +598,9 @@ body.sidebar-open .sidebar,
   font-family: inherit;
   color: var(--text);
   padding: 0.55rem 0.65rem;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
 }
 
 .quick-save__input::placeholder {

@@ -2002,25 +2002,118 @@
     if (el && document.activeElement === el) el.blur();
   }
 
-  function pasteIntoHeaderFromClipboard() {
+  var CLIPBOARD_LOCAL_KEY = "saveSocialClipboardLocal_v1";
+
+  function markLocalClipboardWrite() {
+    try {
+      sessionStorage.setItem(CLIPBOARD_LOCAL_KEY, String(Date.now()));
+    } catch (e) {}
+  }
+
+  function wasLocalClipboardWriteRecent() {
+    try {
+      var t = parseInt(sessionStorage.getItem(CLIPBOARD_LOCAL_KEY), 10);
+      sessionStorage.removeItem(CLIPBOARD_LOCAL_KEY);
+      return !!(t && Date.now() - t < 120000);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function isAppleTouchDevice() {
+    if (typeof navigator === "undefined") return false;
+    var ua = navigator.userAgent || "";
+    if (/iPad|iPhone|iPod/.test(ua)) return true;
+    return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  }
+
+  function applyHeaderClipboardText(text) {
+    var raw = (text || "").trim();
+    if (!raw) {
+      showToast("Chưa có link trong clipboard");
+      return false;
+    }
+    setHeaderUrlValue(raw);
     blurHeaderUrlInput();
+    return true;
+  }
+
+  function tryExecCommandPaste(input) {
+    if (!input) return "";
+    var before = (input.value || "").trim();
+    input.focus({ preventScroll: true });
+    try {
+      var len = before.length;
+      input.setSelectionRange(len, len);
+    } catch (e) {}
+    try {
+      if (document.queryCommandSupported("paste")) document.execCommand("paste");
+    } catch (e) {}
+    var raw = (input.value || "").trim();
+    if (raw && raw !== before) return raw;
+    if (before && !raw) input.value = before;
+    return "";
+  }
+
+  function tryHiddenFieldPaste() {
+    var ta = document.createElement("textarea");
+    ta.setAttribute("readonly", "");
+    ta.style.cssText =
+      "font-size:16px;position:fixed;top:0;left:0;width:1px;height:1px;opacity:0.01;border:0;padding:0;margin:0;";
+    document.body.appendChild(ta);
+    ta.focus({ preventScroll: true });
+    try {
+      if (document.queryCommandSupported("paste")) document.execCommand("paste");
+    } catch (e) {}
+    var text = (ta.value || "").trim();
+    document.body.removeChild(ta);
+    return text;
+  }
+
+  function focusHeaderUrlForNativePaste() {
+    var input = $("headerUrlInput");
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    try {
+      var len = (input.value || "").length;
+      input.setSelectionRange(len, len);
+    } catch (e) {}
+  }
+
+  function pasteIntoHeaderFromClipboard() {
+    var input = $("headerUrlInput");
+    var pasted = input ? tryExecCommandPaste(input) : "";
+    if (pasted) {
+      applyHeaderClipboardText(pasted);
+      return Promise.resolve();
+    }
+
+    pasted = tryHiddenFieldPaste();
+    if (pasted) {
+      applyHeaderClipboardText(pasted);
+      return Promise.resolve();
+    }
+
+    blurHeaderUrlInput();
+
     if (!navigator.clipboard || !navigator.clipboard.readText) {
+      focusHeaderUrlForNativePaste();
       showToast("Không đọc được clipboard");
       return Promise.resolve();
     }
+
     return navigator.clipboard
       .readText()
       .then(function (text) {
-        var raw = (text || "").trim();
-        if (!raw) {
-          showToast("Chưa có link trong clipboard");
-          return;
-        }
-        setHeaderUrlValue(raw);
-        blurHeaderUrlInput();
+        applyHeaderClipboardText(text);
       })
       .catch(function () {
-        showToast("Cho phép truy cập clipboard để dán");
+        focusHeaderUrlForNativePaste();
+        if (isAppleTouchDevice()) {
+          showToast("Chạm «Dán» trên bàn phím hoặc menu của ô");
+        } else {
+          showToast("Cho phép truy cập clipboard để dán");
+        }
       });
   }
 
@@ -2434,6 +2527,7 @@
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(
         function () {
+          markLocalClipboardWrite();
           showToast("Đã sao chép link");
         },
         function () {
@@ -2454,6 +2548,7 @@
     ta.select();
     try {
       document.execCommand("copy");
+      markLocalClipboardWrite();
       showToast("Đã sao chép link");
     } catch (e) {
       showToast("Không sao chép được — hãy chọn link thủ công");
@@ -2521,13 +2616,22 @@
     var btnHeaderPaste = $("btnHeaderPaste");
     if (btnHeaderPaste) {
       btnHeaderPaste.addEventListener("click", function (e) {
-        e.preventDefault();
         e.stopPropagation();
         pasteIntoHeaderFromClipboard();
       });
     }
 
     if (headerUrlInput) {
+      headerUrlInput.addEventListener("touchstart", function () {
+        if (document.activeElement === headerUrlInput) return;
+        headerUrlInput.focus({ preventScroll: true });
+        if (!(headerUrlInput.value || "").trim()) {
+          try {
+            headerUrlInput.setSelectionRange(0, 0);
+          } catch (e) {}
+        }
+      }, { passive: true });
+
       headerUrlInput.addEventListener("click", function (e) {
         e.stopPropagation();
       });
