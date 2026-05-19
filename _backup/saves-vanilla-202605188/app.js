@@ -4,54 +4,26 @@
   var STORAGE_KEY = "saveSocialLibrary_v1";
   var THEME_KEY = "saveSocialTheme_v1";
   var DELETED_TAGS_KEY = "saveSocialDeletedTags_v1";
-  var DEFAULT_ACCENT = "#7c5cfc";
-  var SOURCE_DEFS = [
-    { id: "youtube", label: "YouTube" },
-    { id: "tiktok", label: "TikTok" },
-    { id: "instagram", label: "Instagram" },
-    { id: "facebook", label: "Facebook" },
-    { id: "twitter", label: "Twitter/X" },
-    { id: "website", label: "Website" },
-    { id: "medium", label: "Medium" },
-    { id: "spotify", label: "Spotify" },
-    { id: "github", label: "Github" },
-  ];
-  var FORMAT_DEFS = [
-    { id: "video", label: "Video" },
-    { id: "reel", label: "Reel / Short" },
-    { id: "image", label: "Ảnh" },
-    { id: "article", label: "Bài viết" },
-    { id: "website", label: "Website" },
-    { id: "pdf", label: "PDF" },
-    { id: "tweet", label: "Tweet" },
-    { id: "audio", label: "Audio" },
-    { id: "note", label: "Ghi chú" },
-  ];
+  var DEFAULT_ACCENT = "#0b84c4";
   var THEME_PRESETS = [
-    { id: "purple", label: "Tím", hex: "#7c5cfc" },
-    { id: "pink", label: "Hồng", hex: "#ec4899" },
-    { id: "coral", label: "Cam san hô", hex: "#ff6b4a" },
-    { id: "orange", label: "Cam", hex: "#ff9800" },
-    { id: "yellow", label: "Vàng", hex: "#facc15" },
-    { id: "green", label: "Xanh lá", hex: "#22c55e" },
-    { id: "teal", label: "Xanh ngọc", hex: "#14b8a6" },
-    { id: "blue", label: "Xanh dương", hex: "#38bdf8" },
-    { id: "lavender", label: "Tím nhạt", hex: "#a78bfa" },
-    {
-      id: "gradient",
-      label: "Gradient",
-      hex: "#a78bfa",
-      gradient: "linear-gradient(135deg, #38bdf8 0%, #a78bfa 48%, #ec4899 100%)",
-    },
+    { id: "ocean", label: "Xanh dương", hex: "#0b84c4" },
+    { id: "forest", label: "Xanh lá", hex: "#0d8a5b" },
+    { id: "violet", label: "Tím", hex: "#6d4bd6" },
+    { id: "sunset", label: "Cam", hex: "#e8652a" },
+    { id: "rose", label: "Hồng", hex: "#d9467d" },
+    { id: "slate", label: "Xám xanh", hex: "#3d5a73" },
+    { id: "crimson", label: "Đỏ", hex: "#c62828" },
+    { id: "amber", label: "Vàng cam", hex: "#d97706" },
+    { id: "lime", label: "Lục chanh", hex: "#558b2f" },
+    { id: "indigo", label: "Chàm", hex: "#4338ca" },
+    { id: "white", label: "Trắng", hex: "#ffffff" },
+    { id: "black", label: "Đen", hex: "#000000" },
   ];
   var PRESET_TAGS = ["Nấu ăn", "Tập thể dục", "Con cái", "Mẹo sống"];
   var state = {
     items: [],
     filterTag: null,
-    filterSource: null,
-    filterFormat: null,
     search: "",
-    sheetEditingId: null,
     sort: "newest",
     editingId: null,
     formTags: [],
@@ -62,9 +34,6 @@
     formInfoOpen: false,
     editTitleTouched: false,
     deletedTags: [],
-    sidebarSuppressDocClose: false,
-    sortSuppressDocClose: false,
-    viewMode: "grid",
   };
 
   var editAutoTitleTimer = null;
@@ -128,33 +97,19 @@
     return document.getElementById(id);
   }
 
-  function on(id, event, handler) {
-    var el = typeof id === "string" ? $(id) : id;
-    if (el && handler) el.addEventListener(event, handler);
-    return el;
-  }
-
   function load() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return [];
       var data = JSON.parse(raw);
-      var items = data.items;
-      if (!Array.isArray(items) && Array.isArray(data)) items = data;
-      if (!Array.isArray(items)) return [];
-      return items.map(function (it) {
+      if (!Array.isArray(data.items)) return [];
+      return data.items.map(function (it) {
         var out = {};
         for (var k in it) {
           if (k === "thumbFallback") continue;
           out[k] = it[k];
         }
         out.pinned = !!out.pinned;
-        if (out.source === "web") out.source = "website";
-        if (!out.source || !out.format) {
-          var u = out.url || "";
-          if (!out.source) out.source = detectSource(u);
-          if (!out.format) out.format = detectFormat(u, out.source);
-        }
         return out;
       });
     } catch (e) {
@@ -287,13 +242,9 @@
       var hex = readStoredAccent();
       applyAccentHex(hex);
       syncThemeUi(hex);
-      syncThemeCustomField(hex);
-      bindThemeCustomInput();
     } catch (e) {
       applyAccentHex(DEFAULT_ACCENT);
       syncThemeUi(DEFAULT_ACCENT);
-      syncThemeCustomField(DEFAULT_ACCENT);
-      bindThemeCustomInput();
     }
   }
 
@@ -303,50 +254,9 @@
     return DEFAULT_ACCENT;
   }
 
-  function formatHexDisplay(hex) {
-    return normalizeHex(hex).toUpperCase();
-  }
-
-  function syncThemeCustomField(hex) {
-    var inp = $("themeCustomHex");
-    var prev = $("themeCustomPreview");
-    if (!inp || !prev) return;
-    var n = normalizeHex(hex);
-    inp.value = formatHexDisplay(n);
-    prev.style.background = n;
-  }
-
-  function applyThemeFromHex(hex, silent) {
-    var applied = applyAccentHex(hex);
-    saveThemeAccentOnly(applied);
-    syncThemeUi(applied);
-    syncThemeCustomField(applied);
-    if (!silent) showToast("Đã đổi màu");
-    return applied;
-  }
-
-  function parseCustomHexInput(raw) {
-    var s = String(raw || "").trim();
-    if (!s) return null;
-    if (s.charAt(0) !== "#") s = "#" + s;
-    return hexToRgb(s) ? normalizeHex(s) : null;
-  }
-
-  function applyThemeFromCustomInput() {
-    var inp = $("themeCustomHex");
-    if (!inp) return;
-    var parsed = parseCustomHexInput(inp.value);
-    if (!parsed) {
-      syncThemeCustomField(getAppliedAccentHex());
-      showToast("Mã màu không hợp lệ");
-      return;
-    }
-    applyThemeFromHex(parsed);
-  }
-
   function syncThemeUi(hex) {
     var n = normalizeHex(hex);
-    document.querySelectorAll(".theme-swatch[data-hex]").forEach(function (btn) {
+    document.querySelectorAll(".theme-preset[data-hex]").forEach(function (btn) {
       var h = btn.getAttribute("data-hex");
       var sel = !!(h && normalizeHex(h) === n);
       btn.classList.toggle("is-selected", sel);
@@ -354,366 +264,109 @@
     });
   }
 
-  var themeCustomInputBound = false;
-
-  function bindThemeCustomInput() {
-    if (themeCustomInputBound) return;
-    var inp = $("themeCustomHex");
-    if (!inp) return;
-    themeCustomInputBound = true;
-    inp.addEventListener("input", function () {
-      var prev = $("themeCustomPreview");
-      var parsed = parseCustomHexInput(inp.value);
-      if (parsed && prev) prev.style.background = parsed;
-    });
-    inp.addEventListener("change", applyThemeFromCustomInput);
-    inp.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        applyThemeFromCustomInput();
-        inp.blur();
-      }
-    });
-  }
-
   function renderThemeColorUi() {
-    var presetsWrap = $("sidebarThemePresets");
+    var presetsWrap = $("themePresets");
     if (!presetsWrap) return;
 
     presetsWrap.innerHTML = "";
     THEME_PRESETS.forEach(function (p) {
       var btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "theme-swatch";
+      btn.className = "theme-preset";
       btn.setAttribute("data-hex", p.hex);
-      btn.setAttribute("data-preset-id", p.id);
-      btn.setAttribute("aria-label", p.label);
       btn.setAttribute("aria-pressed", "false");
-      if (p.gradient) btn.style.background = p.gradient;
-      else btn.style.background = p.hex;
 
-      var mark = document.createElement("span");
-      mark.className = "theme-swatch__check";
-      mark.setAttribute("aria-hidden", "true");
-      mark.innerHTML =
-        '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      var sw = document.createElement("span");
+      sw.className = "theme-preset__swatch";
+      sw.style.background = p.hex;
+      sw.setAttribute("aria-hidden", "true");
 
-      btn.appendChild(mark);
+      var lab = document.createElement("span");
+      lab.textContent = p.label;
+
+      btn.appendChild(sw);
+      btn.appendChild(lab);
       btn.addEventListener("click", function (e) {
         e.stopPropagation();
-        applyThemeFromHex(p.hex);
+        var applied = applyAccentHex(p.hex);
+        saveThemeAccentOnly(applied);
+        syncThemeUi(applied);
+        showToast("Đã đổi màu");
       });
       presetsWrap.appendChild(btn);
     });
 
-    bindThemeCustomInput();
     syncThemeUi(getAppliedAccentHex());
-    syncThemeCustomField(getAppliedAccentHex());
   }
 
-  function openSettingsSheet() {
-    closeSortMenu();
-    closeAllCardMenus();
-    closeProfileSheet();
-    closeSidebarIfMobile();
+  function showAppMenuHome() {
+    var home = $("appMenuHomeBody");
+    var settings = $("appMenuSettingsBody");
+    var theme = $("appMenuThemeBody");
+    var gear = $("btnOpenTheme");
+    if (home) home.hidden = false;
+    if (settings) settings.hidden = true;
+    if (theme) theme.hidden = true;
+    if (gear) gear.setAttribute("aria-expanded", "false");
+  }
+
+  function showAppMenuSettings() {
+    var home = $("appMenuHomeBody");
+    var settings = $("appMenuSettingsBody");
+    var theme = $("appMenuThemeBody");
+    var gear = $("btnOpenTheme");
+    if (home) home.hidden = true;
+    if (settings) settings.hidden = false;
+    if (theme) theme.hidden = true;
+    if (gear) gear.setAttribute("aria-expanded", "true");
+  }
+
+  function showAppMenuTheme() {
+    var home = $("appMenuHomeBody");
+    var settings = $("appMenuSettingsBody");
+    var theme = $("appMenuThemeBody");
+    var gear = $("btnOpenTheme");
+    if (home) home.hidden = true;
+    if (settings) settings.hidden = true;
+    if (theme) theme.hidden = false;
+    if (gear) gear.setAttribute("aria-expanded", "true");
     renderThemeColorUi();
     syncThemeUi(getAppliedAccentHex());
-    var sheet = $("settingsSheet");
-    if (!sheet) return;
-    sheet.hidden = false;
-    document.body.style.overflow = "hidden";
-    var btn = $("btnAppMenu");
-    if (btn) btn.setAttribute("aria-expanded", "true");
-  }
-
-  function closeSettingsSheet() {
-    var sheet = $("settingsSheet");
-    if (sheet) sheet.hidden = true;
-    var btn = $("btnAppMenu");
-    if (btn) btn.setAttribute("aria-expanded", "false");
-    if ($("modal").hidden && $("quickSheet").hidden && $("profileSheet").hidden) {
-      document.body.style.overflow = "";
-    }
-  }
-
-  function toggleSettingsSheet() {
-    var sheet = $("settingsSheet");
-    if (sheet && !sheet.hidden) closeSettingsSheet();
-    else openSettingsSheet();
-  }
-
-  function updateProfileStats() {
-    var el = $("profileStatCount");
-    if (!el) return;
-    var n = state.items.length;
-    el.textContent = String(n);
-  }
-
-  function openProfileSheet() {
-    closeSortMenu();
-    closeAllCardMenus();
-    closeSidebarIfMobile();
-    updateProfileStats();
-    var sheet = $("profileSheet");
-    if (!sheet) return;
-    sheet.hidden = false;
-    document.body.style.overflow = "hidden";
-    var btn = $("btnHeaderProfile");
-    if (btn) btn.setAttribute("aria-expanded", "true");
-  }
-
-  function closeProfileSheet() {
-    var sheet = $("profileSheet");
-    if (sheet) sheet.hidden = true;
-    var btn = $("btnHeaderProfile");
-    if (btn) btn.setAttribute("aria-expanded", "false");
-    if ($("modal").hidden && $("quickSheet").hidden && $("settingsSheet").hidden) {
-      document.body.style.overflow = "";
-    }
   }
 
   function detectSource(url) {
     try {
       var u = new URL(url.trim());
       var h = u.hostname.toLowerCase();
-      if (h.includes("youtube.com") || h === "youtu.be" || h.includes("youtube-nocookie.com")) return "youtube";
-      if (h.includes("tiktok.com")) return "tiktok";
-      if (h.includes("instagram.com")) return "instagram";
+      if (h.includes("youtube.com") || h === "youtu.be" || h.includes("youtube-nocookie.com")) {
+        return "youtube";
+      }
       if (h.includes("facebook.com") || h.includes("fb.com") || h.includes("fb.watch") || h.includes("messenger.com")) {
         return "facebook";
       }
-      if (h.includes("twitter.com") || h === "x.com" || h.endsWith(".x.com")) return "twitter";
-      if (h.includes("medium.com")) return "medium";
-      if (h.includes("spotify.com") || h.includes("open.spotify.com")) return "spotify";
-      if (h.includes("github.com")) return "github";
-      return "website";
+      return "web";
     } catch (e) {
-      return "website";
+      return "web";
     }
-  }
-
-  function detectFormat(url, source) {
-    var path = "";
-    var full = (url || "").toLowerCase();
-    try {
-      path = new URL(url.trim()).pathname.toLowerCase();
-    } catch (e) {}
-    if (/\.pdf(\?|$)/i.test(full)) return "pdf";
-    if (source === "youtube") return path.indexOf("/shorts") !== -1 ? "reel" : "video";
-    if (source === "tiktok") return "reel";
-    if (source === "instagram") return path.indexOf("/reel") !== -1 ? "reel" : "image";
-    if (source === "twitter") return "tweet";
-    if (source === "spotify") return "audio";
-    if (source === "medium") return "article";
-    if (source === "github") return "website";
-    if (source === "facebook") {
-      if (path.indexOf("/reel") !== -1) return "reel";
-      if (path.indexOf("/watch") !== -1 || path.indexOf("/video") !== -1) return "video";
-    }
-    return "website";
   }
 
   function sourceLabel(src) {
-    if (src === "web") src = "website";
-    for (var i = 0; i < SOURCE_DEFS.length; i++) {
-      if (SOURCE_DEFS[i].id === src) return SOURCE_DEFS[i].label;
-    }
-    return "Website";
-  }
-
-  function formatLabel(fmt) {
-    for (var j = 0; j < FORMAT_DEFS.length; j++) {
-      if (FORMAT_DEFS[j].id === fmt) return FORMAT_DEFS[j].label;
-    }
-    return "Website";
-  }
-
-  function ensureItemMeta(item) {
-    var url = (item.url || "").trim();
-    if (!item.source) item.source = detectSource(url);
-    if (item.source === "web") item.source = "website";
-    if (!item.format) item.format = detectFormat(url, item.source);
-    return item;
-  }
-
-  function buildItemFromUrl(url, partial) {
-    var o = partial || {};
-    var src = detectSource(url);
-    var fmt = detectFormat(url, src);
-    return ensureItemMeta({
-      id: o.id,
-      url: url,
-      title: o.title || "",
-      note: o.note || "",
-      tags: o.tags || [],
-      createdAt: o.createdAt || new Date().toISOString(),
-      pinned: !!o.pinned,
-      thumbUrl: o.thumbUrl,
-      source: o.source || src,
-      format: o.format || fmt,
-    });
-  }
-
-  function syncMetaFromUrl() {
-    var url = $("urlInput").value.trim();
-    if (!url) return;
-    updateSourceBadge();
+    if (src === "youtube") return "YouTube";
+    if (src === "facebook") return "Facebook";
+    return "Web";
   }
 
   function updateSourceBadge() {
     var url = $("urlInput").value.trim();
     var badge = $("sourceBadge");
-    var preview = $("formPreview");
-    if (!badge) return;
     if (!url) {
       badge.textContent = "—";
-      badge.className = "badge edit-preview__badge";
-      badge.hidden = true;
+      badge.className = "badge";
       return;
     }
     var src = detectSource(url);
-    badge.textContent = sourceLabel(src) + " · " + formatLabel(detectFormat(url, src));
-    badge.className = "badge edit-preview__badge badge--" + (src === "website" ? "web" : src);
-    badge.hidden = preview ? preview.hidden : false;
-  }
-
-  function renderSidebar() {
-    var srcWrap = $("sidebarSources");
-    var fmtWrap = $("sidebarFormats");
-    if (!srcWrap || !fmtWrap) return;
-
-    function navBtn(label, active, onClick) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "sidebar__item" + (active ? " is-active" : "");
-      b.innerHTML = '<span class="sidebar__item-dot" aria-hidden="true"></span>' + label;
-      b.addEventListener("click", onClick);
-      return b;
-    }
-
-    srcWrap.innerHTML = "";
-    srcWrap.appendChild(
-      navBtn("Tất cả nguồn", !state.filterSource, function () {
-        state.filterSource = null;
-        closeSidebarIfMobile();
-        render();
-      })
-    );
-    SOURCE_DEFS.forEach(function (d) {
-      srcWrap.appendChild(
-        navBtn(d.label, state.filterSource === d.id, function () {
-          state.filterSource = state.filterSource === d.id ? null : d.id;
-          closeSidebarIfMobile();
-          render();
-        })
-      );
-    });
-
-    fmtWrap.innerHTML = "";
-    fmtWrap.appendChild(
-      navBtn("Tất cả định dạng", !state.filterFormat, function () {
-        state.filterFormat = null;
-        closeSidebarIfMobile();
-        render();
-      })
-    );
-    FORMAT_DEFS.forEach(function (d) {
-      fmtWrap.appendChild(
-        navBtn(d.label, state.filterFormat === d.id, function () {
-          state.filterFormat = state.filterFormat === d.id ? null : d.id;
-          closeSidebarIfMobile();
-          render();
-        })
-      );
-    });
-  }
-
-  function isMobileLayout() {
-    return typeof window.matchMedia === "function" && window.matchMedia("(max-width: 899px)").matches;
-  }
-
-  function syncSidebarA11y() {
-    var sidebar = $("sidebar");
-    if (!sidebar) return;
-    if (!isMobileLayout()) {
-      sidebar.classList.add("is-open");
-      sidebar.setAttribute("aria-hidden", "false");
-      return;
-    }
-    var on = document.body.classList.contains("sidebar-open");
-    sidebar.classList.toggle("is-open", on);
-    sidebar.setAttribute("aria-hidden", on ? "false" : "true");
-  }
-
-  function setSidebarOpen(open) {
-    var on = !!open;
-    if (!isMobileLayout()) {
-      document.body.classList.remove("sidebar-open");
-      var scrimOff = $("sidebarScrim");
-      if (scrimOff) scrimOff.hidden = true;
-      syncSidebarA11y();
-      return;
-    }
-    document.body.classList.toggle("sidebar-open", on);
-    var btn = $("btnSidebar");
-    var scrim = $("sidebarScrim");
-    if (btn) btn.setAttribute("aria-expanded", on ? "true" : "false");
-    if (scrim) {
-      scrim.hidden = !on;
-      scrim.setAttribute("aria-hidden", on ? "false" : "true");
-    }
-    syncSidebarA11y();
-  }
-
-  function renderMobileFilters() {
-    var srcWrap = $("mobileSourceFilters");
-    var fmtWrap = $("mobileFormatFilters");
-    if (!srcWrap || !fmtWrap) return;
-
-    function chip(label, active, onClick) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "chip" + (active ? " is-active" : "");
-      b.textContent = label;
-      b.addEventListener("click", onClick);
-      return b;
-    }
-
-    srcWrap.innerHTML = "";
-    srcWrap.appendChild(
-      chip("Tất cả nguồn", !state.filterSource, function () {
-        state.filterSource = null;
-        render();
-      })
-    );
-    SOURCE_DEFS.forEach(function (d) {
-      srcWrap.appendChild(
-        chip(d.label, state.filterSource === d.id, function () {
-          state.filterSource = state.filterSource === d.id ? null : d.id;
-          render();
-        })
-      );
-    });
-
-    fmtWrap.innerHTML = "";
-    fmtWrap.appendChild(
-      chip("Tất cả định dạng", !state.filterFormat, function () {
-        state.filterFormat = null;
-        render();
-      })
-    );
-    FORMAT_DEFS.forEach(function (d) {
-      fmtWrap.appendChild(
-        chip(d.label, state.filterFormat === d.id, function () {
-          state.filterFormat = state.filterFormat === d.id ? null : d.id;
-          render();
-        })
-      );
-    });
-  }
-
-  function closeSidebarIfMobile() {
-    if (isMobileLayout()) setSidebarOpen(false);
+    badge.textContent = sourceLabel(src);
+    badge.className = "badge badge--" + src;
   }
 
   function hostnameTitle(url) {
@@ -862,28 +515,9 @@
     });
   }
 
-  function matchesSourceFilter(item) {
-    if (!state.filterSource) return true;
-    var src = item.source || detectSource(item.url || "");
-    if (src === "web") src = "website";
-    return src === state.filterSource;
-  }
-
-  function matchesFormatFilter(item) {
-    if (!state.filterFormat) return true;
-    var fmt = item.format || detectFormat(item.url || "", item.source);
-    return fmt === state.filterFormat;
-  }
-
   function getFilteredOnly() {
     return state.items.filter(function (item) {
-      ensureItemMeta(item);
-      return (
-        matchesSearch(item, state.search) &&
-        matchesTagFilter(item) &&
-        matchesSourceFilter(item) &&
-        matchesFormatFilter(item)
-      );
+      return matchesSearch(item, state.search) && matchesTagFilter(item);
     });
   }
 
@@ -935,7 +569,7 @@
       if (id) return { kind: "youtube", id: id, urls: youtubeThumbUrls(id) };
     }
     if (src === "facebook") return { kind: "placeholder", platform: "facebook" };
-    return { kind: "placeholder", platform: src === "web" ? "website" : src };
+    return { kind: "placeholder", platform: "web" };
   }
 
   var fbThumbPending = {};
@@ -1015,49 +649,16 @@
     });
   }
 
-  function sortBlockedForManual() {
-    return !!(state.search || state.filterTag || state.filterSource || state.filterFormat);
-  }
-
   function canReorder() {
-    return state.sort === "manual" && !sortBlockedForManual();
-  }
-
-  function getCardLiVisualOrder(listEl) {
-    var rows = Array.prototype.slice.call(listEl.querySelectorAll(":scope > li.card-li"));
-    return rows
-      .map(function (el) {
-        var r = el.getBoundingClientRect();
-        return { el: el, top: r.top, left: r.left, height: r.height };
-      })
-      .sort(function (a, b) {
-        if (Math.abs(a.top - b.top) > 14) return a.top - b.top;
-        return a.left - b.left;
-      })
-      .map(function (x) {
-        return x.el;
-      });
-  }
-
-  function getVisualItemIds(listEl) {
-    return getCardLiVisualOrder(listEl)
-      .map(function (el) {
-        return el.dataset.itemId;
-      })
-      .filter(Boolean);
-  }
-
-  function visualIndexOfItem(listEl, itemId) {
-    var ids = getVisualItemIds(listEl);
-    return ids.indexOf(itemId);
+    return state.sort === "manual" && !state.search && !state.filterTag;
   }
 
   function pickDropFinalIndex(listEl, clientY) {
-    var ordered = getCardLiVisualOrder(listEl);
-    var n = ordered.length;
+    var rows = listEl.querySelectorAll(":scope > li.card-li");
+    var n = rows.length;
     if (!n) return 0;
     for (var i = 0; i < n; i++) {
-      var r = ordered[i].getBoundingClientRect();
+      var r = rows[i].getBoundingClientRect();
       var mid = r.top + r.height / 2;
       if (clientY <= mid) return i;
     }
@@ -1071,12 +672,14 @@
       if (!canReorder()) return;
       e.preventDefault();
       e.stopPropagation();
-      var fromIdx = visualIndexOfItem(listEl, itemId);
+      var vis = getFilteredSorted();
+      var fromIdx = vis.findIndex(function (x) {
+        return x.id === itemId;
+      });
       if (fromIdx < 0) return;
       btn.setPointerCapture(e.pointerId);
       reorderPointer = {
         pointerId: e.pointerId,
-        itemId: itemId,
         fromIdx: fromIdx,
         listEl: listEl,
         btn: btn,
@@ -1096,9 +699,10 @@
       reorderPointer.listEl.querySelectorAll(".card-li").forEach(function (c) {
         c.classList.remove("card-li--drag-target");
       });
-      var ordered = getCardLiVisualOrder(reorderPointer.listEl);
-      var hi = Math.min(Math.max(0, to), ordered.length - 1);
-      if (ordered[hi]) ordered[hi].classList.add("card-li--drag-target");
+      var rows = reorderPointer.listEl.querySelectorAll(":scope > li.card-li");
+      var n = rows.length;
+      var hi = Math.min(Math.max(0, to), n - 1);
+      if (rows[hi]) rows[hi].classList.add("card-li--drag-target");
     });
 
     function endDrag(e) {
@@ -1108,36 +712,27 @@
       } catch (ex) {}
       var from = reorderPointer.fromIdx;
       var to = reorderPointer.lastTo;
-      var movedId = reorderPointer.itemId;
-      var listElRef = reorderPointer.listEl;
       reorderPointer.listEl.querySelectorAll(".card-li").forEach(function (c) {
         c.classList.remove("card-li--dragging", "card-li--drag-target");
       });
       document.body.classList.remove("is-reordering");
       reorderPointer = null;
-      if (from !== to && from >= 0 && to >= 0 && movedId) {
-        var ids = getVisualItemIds(listElRef);
-        var fromId = ids.indexOf(movedId);
-        if (fromId < 0) return;
-        ids.splice(fromId, 1);
+      if (from !== to && from >= 0 && to >= 0) {
+        var ids = getFilteredSorted().map(function (x) {
+          return x.id;
+        });
+        var moved = ids.splice(from, 1)[0];
         var toClamped = Math.min(Math.max(0, to), ids.length);
-        ids.splice(toClamped, 0, movedId);
+        ids.splice(toClamped, 0, moved);
         var byId = {};
         state.items.forEach(function (x) {
           byId[x.id] = x;
         });
-        var reordered = ids
+        state.items = ids
           .map(function (id) {
             return byId[id];
           })
           .filter(Boolean);
-        var pinned = [];
-        var unpinned = [];
-        reordered.forEach(function (x) {
-          if (x.pinned) pinned.push(x);
-          else unpinned.push(x);
-        });
-        state.items = pinned.concat(unpinned);
         persist();
         render();
         showToast("Đã đổi thứ tự");
@@ -1153,13 +748,10 @@
     if (!el) return;
     if (state.sort === "manual") {
       el.hidden = false;
-      if (sortBlockedForManual()) {
-        el.textContent = "Tắt tìm kiếm và mọi bộ lọc để kéo đổi vị trí.";
-      } else if (state.viewMode !== "list") {
-        el.textContent = "Dùng chế độ danh sách để kéo dễ hơn. Mục ghim luôn ở trên.";
-      } else {
-        el.textContent = "Mục ghim luôn ở trên. Giữ nút ⋮⋮ và kéo để đổi thứ tự.";
-      }
+      el.textContent =
+        state.search || state.filterTag
+          ? "Tắt ô tìm kiếm và lọc thẻ để kéo đổi vị trí."
+          : "Mục ghim luôn ở trên. Giữ nút ⋮⋮ và kéo để đổi thứ tự.";
     } else {
       el.hidden = true;
     }
@@ -1194,34 +786,27 @@
   function closeSortMenu() {
     var p = $("sortMenuPopover");
     var b = $("btnSortMenu");
-    var wrap = $("sortMenuWrap");
-    var bar = document.querySelector(".content-toolbar");
     if (p) p.hidden = true;
     if (b) {
       b.setAttribute("aria-expanded", "false");
       b.classList.remove("is-active");
     }
-    if (wrap) wrap.classList.remove("is-open");
-    if (bar) bar.classList.remove("is-sort-open");
   }
 
   function toggleSortMenu() {
     var p = $("sortMenuPopover");
     var b = $("btnSortMenu");
-    var wrap = $("sortMenuWrap");
-    var bar = document.querySelector(".content-toolbar");
     if (!p || !b) return;
     var willOpen = p.hidden;
     closeAllCardMenus();
     if (willOpen) {
-      state.sortSuppressDocClose = true;
       p.hidden = false;
       b.setAttribute("aria-expanded", "true");
       b.classList.add("is-active");
-      if (wrap) wrap.classList.add("is-open");
-      if (bar) bar.classList.add("is-sort-open");
     } else {
-      closeSortMenu();
+      p.hidden = true;
+      b.setAttribute("aria-expanded", "false");
+      b.classList.remove("is-active");
     }
   }
 
@@ -1231,9 +816,6 @@
     });
     document.querySelectorAll(".card__more").forEach(function (btn) {
       btn.setAttribute("aria-expanded", "false");
-    });
-    document.querySelectorAll(".card-li--menu-open").forEach(function (li) {
-      li.classList.remove("card-li--menu-open");
     });
   }
 
@@ -1275,7 +857,6 @@
     if (state.sort === "newest") el.innerHTML = svgSortMenuClock();
     else if (state.sort === "title") el.innerHTML = '<span class="sort-menu__icon-text" aria-hidden="true">A↓</span>';
     else el.innerHTML = '<span class="sort-menu__icon-grip" aria-hidden="true">⋮⋮</span>';
-    syncSortMenuLabel();
   }
 
   function syncSortMenuItems() {
@@ -1295,22 +876,15 @@
   function applySort(next) {
     if (next === state.sort) return;
     if (next === "manual") {
-      if (sortBlockedForManual()) {
-        showToast("Tắt tìm kiếm và mọi bộ lọc để dùng thứ tự kéo.");
+      if (state.search || state.filterTag) {
+        showToast("Tắt tìm kiếm và lọc thẻ để dùng thứ tự kéo.");
         syncSortMenuItems();
         updateSortMenuIcon();
         closeSortMenu();
         return;
       }
       var ordered = getFilteredSorted();
-      var pinned = [];
-      var unpinned = [];
-      ordered.forEach(function (x) {
-        if (x.pinned) pinned.push(x);
-        else unpinned.push(x);
-      });
-      state.items = pinned.concat(unpinned);
-      setViewMode("list");
+      state.items = ordered.slice();
     }
     state.sort = next;
     closeSortMenu();
@@ -1417,7 +991,7 @@
     if (tagsDiv.children.length) main.appendChild(tagsDiv);
 
     var noteText = (item.note || "").trim();
-    if (noteText && !isPreview) {
+    if (noteText) {
       var note = document.createElement("p");
       note.className = "card__note card__note--thumb-title-row";
       note.textContent = noteText;
@@ -1449,68 +1023,6 @@
     };
   }
 
-  function syncEditFormCounters() {
-    var ti = $("titleInput");
-    var ni = $("noteInput");
-    var tc = $("titleCharCount");
-    var nc = $("noteCharCount");
-    if (ti && tc) tc.textContent = (ti.value || "").length + "/100";
-    if (ni && nc) nc.textContent = (ni.value || "").length + "/200";
-  }
-
-  function fillEditPreviewMedia(mediaEl, item) {
-    var tw = thumbWrapForUrl(item.url);
-    var fmt = item.format || detectFormat(item.url, item.source);
-    var src = item.source || detectSource(item.url);
-
-    if (tw.kind === "youtube") {
-      var img = document.createElement("img");
-      img.className = "edit-preview__img";
-      img.alt = "";
-      img.decoding = "async";
-      img.src = tw.urls[0];
-      img.onerror = function () {
-        if (tw.urls[1] && img.src !== tw.urls[1]) img.src = tw.urls[1];
-      };
-      mediaEl.appendChild(img);
-      if (fmt === "video" || fmt === "reel") {
-        appendPlayOverlay(mediaEl);
-        var dur = document.createElement("span");
-        dur.className = "edit-preview__duration";
-        dur.textContent = fmt === "reel" ? "Short" : "Video";
-        mediaEl.appendChild(dur);
-      }
-    } else if (item.thumbUrl && src === "facebook") {
-      var imgFb = document.createElement("img");
-      imgFb.className = "edit-preview__img";
-      imgFb.alt = "";
-      imgFb.decoding = "async";
-      imgFb.referrerPolicy = "no-referrer";
-      imgFb.src = item.thumbUrl;
-      mediaEl.appendChild(imgFb);
-      if (fmt === "video" || fmt === "reel") appendPlayOverlay(mediaEl);
-    } else {
-      var ph = document.createElement("div");
-      ph.className = "edit-preview__ph edit-preview__ph--" + (tw.platform || "website");
-      ph.setAttribute("aria-hidden", "true");
-      mediaEl.appendChild(ph);
-      if (fmt === "video" || fmt === "reel" || fmt === "audio") appendPlayOverlay(mediaEl);
-    }
-
-    var editBtn = document.createElement("button");
-    editBtn.type = "button";
-    editBtn.className = "edit-preview__edit";
-    editBtn.setAttribute("aria-label", "Sửa tiêu đề");
-    editBtn.innerHTML =
-      '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M13.5 6.5l3 3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
-    editBtn.addEventListener("click", function (e) {
-      e.preventDefault();
-      var ti = $("titleInput");
-      if (ti) ti.focus();
-    });
-    mediaEl.appendChild(editBtn);
-  }
-
   function renderFormPreview() {
     var box = $("formPreview");
     if (!box) return;
@@ -1518,7 +1030,6 @@
     if (!url) {
       box.hidden = true;
       box.innerHTML = "";
-      updateSourceBadge();
       return;
     }
     try {
@@ -1526,39 +1037,16 @@
     } catch (err) {
       box.hidden = true;
       box.innerHTML = "";
-      updateSourceBadge();
       return;
     }
     box.hidden = false;
     box.innerHTML = "";
-    box.className = "edit-preview";
+    box.className = "form-preview";
 
-    var item = formPreviewItemFromForm();
-    ensureItemMeta(item);
-    var src = item.source || detectSource(url);
-
-    var card = document.createElement("article");
-    card.className = "edit-preview__card";
-
-    var media = document.createElement("div");
-    media.className = "edit-preview__media";
-    fillEditPreviewMedia(media, item);
-    card.appendChild(media);
-
-    var body = document.createElement("div");
-    body.className = "edit-preview__body";
-    var titleEl = document.createElement("h3");
-    titleEl.className = "edit-preview__title";
-    titleEl.textContent = item.title || url;
-    body.appendChild(titleEl);
-    var meta = document.createElement("p");
-    meta.className = "edit-preview__meta";
-    meta.textContent = formatRelativeTime(item.createdAt);
-    body.appendChild(meta);
-    card.appendChild(body);
-
+    var card = document.createElement("div");
+    card.className = "card card--row form-preview__card";
+    appendCardContentCluster(card, formPreviewItemFromForm(), { isPreview: true });
     box.appendChild(card);
-    updateSourceBadge();
   }
 
   function formatDate(iso) {
@@ -1573,88 +1061,6 @@
       });
     } catch (e) {
       return "";
-    }
-  }
-
-  function formatRelativeTime(iso) {
-    try {
-      var sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-      if (sec < 45) return "Vừa xong";
-      var min = Math.floor(sec / 60);
-      if (min < 60) return min + " phút trước";
-      var hr = Math.floor(min / 60);
-      if (hr < 24) return hr + " giờ trước";
-      var day = Math.floor(hr / 24);
-      if (day < 7) return day + " ngày trước";
-      if (day < 30) return Math.floor(day / 7) + " tuần trước";
-      return formatDate(iso);
-    } catch (e) {
-      return "";
-    }
-  }
-
-  function tagPillTone(tag) {
-    var h = 0;
-    var s = tag || "";
-    for (var i = 0; i < s.length; i++) h = (h + s.charCodeAt(i) * (i + 1)) % 6;
-    return "grid-card__tag-tone--" + h;
-  }
-
-  function sourceIconLetter(src) {
-    var map = {
-      youtube: "▶",
-      tiktok: "♪",
-      instagram: "◎",
-      facebook: "f",
-      twitter: "𝕏",
-      medium: "M",
-      spotify: "♫",
-      github: "⌂",
-      website: "🔗",
-    };
-    return map[src] || "•";
-  }
-
-  function appendSourceBadge(mediaEl, src) {
-    var el = document.createElement("span");
-    el.className = "grid-card__source-badge grid-card__source-badge--" + (src || "website");
-    el.setAttribute("aria-hidden", "true");
-    el.textContent = sourceIconLetter(src);
-    mediaEl.appendChild(el);
-  }
-
-  function appendPlayOverlay(mediaEl) {
-    var play = document.createElement("span");
-    play.className = "grid-card__play";
-    play.setAttribute("aria-hidden", "true");
-    play.innerHTML =
-      '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M9 7.5l9 4.5-9 4.5V7.5z" fill="currentColor"/></svg>';
-    mediaEl.appendChild(play);
-  }
-
-  var SORT_LABELS = { newest: "Mới nhất", title: "Theo tên A–Z", manual: "Tự kéo" };
-
-  function syncSortMenuLabel() {
-    var el = $("sortMenuLabel");
-    if (el) el.textContent = SORT_LABELS[state.sort] || "Mới nhất";
-  }
-
-  function setViewMode(mode) {
-    state.viewMode = mode === "list" ? "list" : "grid";
-    var list = $("itemList");
-    var btnGrid = $("btnViewGrid");
-    var btnList = $("btnViewList");
-    if (list) {
-      list.classList.toggle("masonry--grid", state.viewMode === "grid");
-      list.classList.toggle("masonry--list", state.viewMode === "list");
-    }
-    if (btnGrid) {
-      btnGrid.classList.toggle("is-active", state.viewMode === "grid");
-      btnGrid.setAttribute("aria-pressed", state.viewMode === "grid" ? "true" : "false");
-    }
-    if (btnList) {
-      btnList.classList.toggle("is-active", state.viewMode === "list");
-      btnList.setAttribute("aria-pressed", state.viewMode === "list" ? "true" : "false");
     }
   }
 
@@ -1676,18 +1082,42 @@
   }
 
   function openModal() {
-    closeProfileSheet();
+    closeAppMenu();
     $("modal").hidden = false;
-    $("modalTitle").textContent = "Chỉnh sửa link";
+    $("modalTitle").textContent = "Sửa liên kết";
     setFormUrlGroupVisible(true);
     document.body.style.overflow = "hidden";
     refreshNetworkUi();
+    if ($("urlInput")) $("urlInput").focus();
   }
 
+  function closeAppMenu() {
+    var m = $("appMenu");
+    var b = $("btnAppMenu");
+    if (m) m.hidden = true;
+    if (b) b.setAttribute("aria-expanded", "false");
+    showAppMenuHome();
+  }
+
+  function toggleAppMenu() {
+    var m = $("appMenu");
+    var b = $("btnAppMenu");
+    if (!m || !b) return;
+    var open = m.hidden;
+    closeSortMenu();
+    closeAllCardMenus();
+    if (open) {
+      m.hidden = false;
+      b.setAttribute("aria-expanded", "true");
+      showAppMenuHome();
+    } else {
+      m.hidden = true;
+      b.setAttribute("aria-expanded", "false");
+    }
+  }
 
   function closeModal() {
     clearEditAutoTitleTimer();
-    closeQuickSheet();
     $("modal").hidden = true;
     document.body.style.overflow = "";
     state.editingId = null;
@@ -1713,7 +1143,7 @@
     }
     closeSortMenu();
     closeAllCardMenus();
-    closeProfileSheet();
+    closeAppMenu();
   }
 
   function tagsForFormPicker() {
@@ -1844,70 +1274,58 @@
     syncFormInfoUi();
   }
 
-  function editTagToneClass(tag) {
-    return tagPillTone(tag).replace("grid-card__tag-tone", "edit-tag-pill--tone");
-  }
-
   function renderFormTagChips() {
     var wrap = $("formTagChips");
     if (!wrap) return;
     wrap.innerHTML = "";
-
-    var pickerTags = tagsForFormPicker();
-    if (!pickerTags.length) {
-      var empty = document.createElement("p");
-      empty.className = "edit-tags__empty";
-      empty.textContent = "Chưa có thẻ — bấm + để tạo mới";
-      wrap.appendChild(empty);
-    }
-
-    pickerTags.forEach(function (tag) {
-      var n = normalizeTag(tag);
+    tagsForFormPicker().forEach(function (tag) {
       var selected = state.formTags.some(function (t) {
-        return normalizeTag(t) === n;
+        return normalizeTag(t) === tag;
       });
-
-      var chip = document.createElement("span");
-      chip.className =
-        "edit-tag-chip" + (selected ? " edit-tag-chip--selected " + editTagToneClass(tag) : " edit-tag-chip--option");
-
-      var toggleBtn = document.createElement("button");
-      toggleBtn.type = "button";
-      toggleBtn.className = "edit-tag-chip__toggle";
-      toggleBtn.textContent = tag;
-      toggleBtn.setAttribute("aria-pressed", selected ? "true" : "false");
-      toggleBtn.setAttribute("aria-label", selected ? "Bỏ chọn thẻ " + tag : "Chọn thẻ " + tag);
-      toggleBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        if (selected) {
-          state.formTags = state.formTags.filter(function (t) {
-            return normalizeTag(t) !== n;
-          });
-        } else {
-          state.formTags.push(tag);
-        }
+      function toggleTag() {
+        if (state.formTagManageMode) return;
+        var i = -1;
+        state.formTags.forEach(function (t, idx) {
+          if (normalizeTag(t) === tag) i = idx;
+        });
+        if (i === -1) state.formTags.push(tag);
+        else state.formTags.splice(i, 1);
         renderFormTagChips();
-      });
-      chip.appendChild(toggleBtn);
-
-      var deleteBtn = document.createElement("button");
-      deleteBtn.type = "button";
-      deleteBtn.className = "edit-tag-chip__delete";
-      deleteBtn.textContent = "×";
-      deleteBtn.setAttribute("aria-label", "Xóa thẻ " + tag + " khỏi thư viện");
-      deleteBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        deleteTagGlobally(tag);
-      });
-      chip.appendChild(deleteBtn);
-
-      wrap.appendChild(chip);
+      }
+      var chipWrap = document.createElement("span");
+      chipWrap.className = "chip form-tag-chip-wrap" + (selected ? " is-active" : "");
+      var mainBtn = document.createElement("button");
+      mainBtn.type = "button";
+      mainBtn.className = "form-tag-chip__main";
+      mainBtn.textContent = tag;
+      mainBtn.setAttribute("aria-pressed", selected ? "true" : "false");
+      if (!state.formTagManageMode) {
+        mainBtn.addEventListener("click", toggleTag);
+      }
+      chipWrap.appendChild(mainBtn);
+      if (state.formTagManageMode) {
+        var removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "form-tag-chip__remove";
+        removeBtn.setAttribute("aria-label", "Xóa thẻ " + tag);
+        removeBtn.textContent = "×";
+        removeBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          deleteTagGlobally(tag);
+        });
+        chipWrap.appendChild(removeBtn);
+      }
+      wrap.appendChild(chipWrap);
     });
 
-    var addBtn = $("btnFormTagAdd");
-    if (addBtn) {
-      addBtn.setAttribute("aria-expanded", state.formTagAddOpen ? "true" : "false");
-    }
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "chip form-tag-chip form-tag-chip--add";
+    addBtn.textContent = "+ Tag";
+    addBtn.setAttribute("aria-expanded", state.formTagAddOpen ? "true" : "false");
+    addBtn.setAttribute("aria-controls", "formTagInputWrap");
+    wrap.appendChild(addBtn);
+
     var wi = $("formTagInputWrap");
     if (wi) wi.hidden = !state.formTagAddOpen || state.formTagManageMode;
     syncFormTagManageUi();
@@ -2049,16 +1467,15 @@
         var newId = crypto.randomUUID
           ? crypto.randomUUID()
           : "id-" + Date.now() + "-" + Math.random().toString(36).slice(2);
-        state.items.unshift(
-          buildItemFromUrl(raw, {
-            id: newId,
-            title: title,
-            note: "",
-            tags: tags,
-            createdAt: new Date().toISOString(),
-            pinned: false,
-          })
-        );
+        state.items.unshift({
+          id: newId,
+          url: raw,
+          title: title,
+          note: "",
+          tags: tags,
+          createdAt: new Date().toISOString(),
+          pinned: false,
+        });
         persist();
         render();
         if (detectSource(raw) === "facebook") queueFacebookThumbFetch(newId);
@@ -2083,6 +1500,10 @@
   function renderTagFilters() {
     var wrap = $("tagFilters");
     if (!wrap) return;
+    var searchBundle = $("filtersSearchBundle");
+    if (searchBundle && searchBundle.parentNode) {
+      searchBundle.parentNode.removeChild(searchBundle);
+    }
     wrap.innerHTML = "";
 
     var all = document.createElement("button");
@@ -2106,226 +1527,30 @@
       });
       wrap.appendChild(btn);
     });
-  }
 
-  function fillGridCardMedia(mediaEl, item) {
-    ensureItemMeta(item);
-    var tw = thumbWrapForUrl(item.url);
-    var fmt = item.format || "website";
-    var src = item.source || detectSource(item.url);
-    appendSourceBadge(mediaEl, src);
-    if (fmt === "tweet") {
-      var tweet = document.createElement("p");
-      tweet.className = "grid-card__tweet";
-      tweet.textContent = item.title || item.url;
-      mediaEl.appendChild(tweet);
-      return;
-    }
-    if (tw.kind === "youtube") {
-      var img = document.createElement("img");
-      img.alt = "";
-      img.decoding = "async";
-      img.loading = "lazy";
-      img.src = tw.urls[0];
-      img.onerror = function () {
-        if (tw.urls[1] && img.src !== tw.urls[1]) img.src = tw.urls[1];
-      };
-      mediaEl.appendChild(img);
-      if (fmt === "video" || fmt === "reel") {
-        appendPlayOverlay(mediaEl);
-        var dur = document.createElement("span");
-        dur.className = "grid-card__duration";
-        dur.textContent = fmt === "reel" ? "Short" : "Video";
-        mediaEl.appendChild(dur);
-      }
-      return;
-    }
-    if (item.thumbUrl && item.source === "facebook") {
-      var imgFb = document.createElement("img");
-      imgFb.alt = "";
-      imgFb.decoding = "async";
-      imgFb.loading = "lazy";
-      imgFb.referrerPolicy = "no-referrer";
-      imgFb.src = item.thumbUrl;
-      imgFb.onerror = function () {
-        fbThumbFailed[item.id] = true;
-        clearItemThumbUrl(item.id);
-        render();
-      };
-      mediaEl.appendChild(imgFb);
-      if (fmt === "video" || fmt === "reel") appendPlayOverlay(mediaEl);
-      return;
-    }
-    if (fmt === "video" || fmt === "reel" || fmt === "audio") {
-      appendPlayOverlay(mediaEl);
-    }
-    var ph = document.createElement("div");
-    ph.className = "grid-card__ph grid-card__ph--" + (tw.platform || "website");
-    ph.setAttribute("aria-hidden", "true");
-    if (fmt === "pdf") ph.textContent = "PDF";
-    mediaEl.appendChild(ph);
-  }
-
-  function buildCardMenu(item) {
-    var menuWrap = document.createElement("div");
-    menuWrap.className = "grid-card__menu-wrap card__menu-wrap";
-    var moreBtn = document.createElement("button");
-    moreBtn.type = "button";
-    moreBtn.className = "card__more";
-    moreBtn.setAttribute("aria-label", "Thêm thao tác");
-    moreBtn.setAttribute("aria-expanded", "false");
-    moreBtn.innerHTML = "⋯";
-    var dropdown = document.createElement("div");
-    dropdown.className = "card__dropdown";
-    dropdown.hidden = true;
-    dropdown.setAttribute("role", "menu");
-
-    function addMenuItem(label, fn, itemClass) {
-      var m = document.createElement("button");
-      m.type = "button";
-      m.className = "card__dropdown-item" + (itemClass ? " " + itemClass : "");
-      m.setAttribute("role", "menuitem");
-      m.textContent = label;
-      m.addEventListener("click", function (e) {
-        e.stopPropagation();
-        dropdown.hidden = true;
-        moreBtn.setAttribute("aria-expanded", "false");
-        fn();
-      });
-      dropdown.appendChild(m);
-    }
-
-    addMenuItem("Mở", function () {
-      window.open(item.url, "_blank", "noopener,noreferrer");
-    });
-    addMenuItem("Sửa nhanh", function () {
-      openQuickSheet(item);
-    });
-    addMenuItem("Sửa", function () {
-      openEdit(item);
-    });
-    addMenuItem("Sao chép", function () {
-      copyUrl(item.url);
-    });
-    addMenuItem(item.pinned ? "Bỏ ghim" : "Ghim lên đầu", function () {
-      togglePinItem(item.id);
-    });
-    addMenuItem(
-      "Xóa",
-      function () {
-        performDeleteItem(item.id);
-      },
-      "card__dropdown-item--danger"
-    );
-
-    moreBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      var willOpen = dropdown.hidden;
-      closeAllCardMenus();
-      closeSortMenu();
-      if (willOpen) {
-        dropdown.hidden = false;
-        moreBtn.setAttribute("aria-expanded", "true");
-        var li = moreBtn.closest(".card-li");
-        if (li) li.classList.add("card-li--menu-open");
-      }
-    });
-
-    dropdown.addEventListener("click", function (e) {
-      e.stopPropagation();
-    });
-
-    menuWrap.appendChild(moreBtn);
-    menuWrap.appendChild(dropdown);
-    return menuWrap;
-  }
-
-  function buildCardFooter(item, card) {
-    var foot = document.createElement("div");
-    foot.className = "grid-card__foot";
-    var tags = item.tags || [];
-    if (tags.length) {
-      var tagsWrap = document.createElement("div");
-      tagsWrap.className = "grid-card__tags";
-      tags.forEach(function (t) {
-        var tagEl = document.createElement("span");
-        tagEl.className = "grid-card__tag " + tagPillTone(t);
-        tagEl.textContent = t;
-        tagsWrap.appendChild(tagEl);
-      });
-      foot.appendChild(tagsWrap);
-    } else {
-      foot.classList.add("grid-card__foot--no-tag");
-    }
-    foot.appendChild(buildCardMenu(item));
-    card.appendChild(foot);
-  }
-
-  function openQuickSheet(item) {
-    closeAllCardMenus();
-    closeModal();
-    state.sheetEditingId = item.id;
-    $("sheetTitleInput").value = item.title || "";
-    $("sheetNoteInput").value = item.note || "";
-    $("quickSheet").hidden = false;
-    document.body.style.overflow = "hidden";
-    $("sheetTitleInput").focus();
-  }
-
-  function closeQuickSheet() {
-    $("quickSheet").hidden = true;
-    state.sheetEditingId = null;
-    if ($("modal").hidden) document.body.style.overflow = "";
-  }
-
-  function saveQuickSheet() {
-    var id = state.sheetEditingId;
-    if (!id) return;
-    var title = $("sheetTitleInput").value.trim();
-    var note = $("sheetNoteInput").value.trim();
-    if (!title) {
-      showToast("Tiêu đề không được trống");
-      return;
-    }
-    state.items = state.items.map(function (x) {
-      if (x.id !== id) return x;
-      var o = {};
-      for (var k in x) o[k] = x[k];
-      o.title = title;
-      o.note = note;
-      return o;
-    });
-    persist();
-    closeQuickSheet();
-    render();
-    showToast("Đã cập nhật");
+    if (searchBundle) wrap.appendChild(searchBundle);
   }
 
   function renderList() {
     var listEl = $("itemList");
     var emptyEl = $("emptyState");
-    if (!listEl || !emptyEl) return;
     var filtered = getFilteredSorted();
 
-    var countEl = $("resultCount");
-    if (countEl) {
-      countEl.textContent =
-        filtered.length === state.items.length
-          ? filtered.length + " mục"
-          : filtered.length + " / " + state.items.length + " mục";
-    }
+    $("resultCount").textContent =
+      filtered.length === state.items.length
+        ? filtered.length + " mục"
+        : filtered.length + " / " + state.items.length + " mục";
 
     listEl.innerHTML = "";
     if (filtered.length === 0) {
       emptyEl.hidden = false;
       if (state.items.length > 0) {
         emptyEl.querySelector(".empty__title").textContent = "Không khớp bộ lọc";
-        emptyEl.querySelector(".empty__text").textContent =
-          "Thử bỏ lọc nguồn, định dạng, thẻ hoặc đổi từ khóa tìm kiếm.";
+        emptyEl.querySelector(".empty__text").textContent = "Thử bỏ thẻ lọc hoặc đổi từ khóa tìm kiếm.";
       } else {
         emptyEl.querySelector(".empty__title").textContent = "Chưa có liên kết nào";
         emptyEl.querySelector(".empty__text").innerHTML =
-          "Copy link → dán vào ô phía trên → nhấn <strong>+</strong> để lưu.";
+          "Copy link → mở app → nhấn <strong>Dán</strong> → nhấn <strong>+</strong> để lưu.";
       }
       return;
     }
@@ -2337,49 +1562,85 @@
       li.className = "card-li" + (item.pinned ? " card-li--pinned" : "");
       li.dataset.itemId = item.id;
 
-      ensureItemMeta(item);
-      var fmt = item.format || "website";
+      var card = document.createElement("div");
+      card.className = "card card--row";
 
-      if (canReorder() && filtered.length > 1) {
+      if (canReorder() && state.items.length > 1) {
         var grab = document.createElement("button");
         grab.type = "button";
-        grab.className = "grid-card__reorder";
+        grab.className = "card__reorder";
         grab.setAttribute("aria-label", "Kéo để đổi vị trí");
         grab.innerHTML = "⋮⋮";
         bindReorderHandle(grab, item.id, listEl);
-        li.appendChild(grab);
+        card.appendChild(grab);
       }
 
-      var card = document.createElement("article");
-      card.className = "grid-card grid-card--" + fmt;
+      appendCardContentCluster(card, item);
 
-      var media = document.createElement("div");
-      media.className = "grid-card__media";
-      fillGridCardMedia(media, item);
-      card.appendChild(media);
+      var menuWrap = document.createElement("div");
+      menuWrap.className = "card__menu-wrap card__menu-wrap--float";
+      var moreBtn = document.createElement("button");
+      moreBtn.type = "button";
+      moreBtn.className = "card__more";
+      moreBtn.setAttribute("aria-label", "Thêm thao tác");
+      moreBtn.setAttribute("aria-expanded", "false");
+      moreBtn.setAttribute("aria-haspopup", "true");
+      moreBtn.innerHTML = "⋯";
+      var dropdown = document.createElement("div");
+      dropdown.className = "card__dropdown";
+      dropdown.hidden = true;
+      dropdown.setAttribute("role", "menu");
 
-      var body = document.createElement("div");
-      body.className = "grid-card__body";
+      function addMenuItem(label, fn, itemClass) {
+        var m = document.createElement("button");
+        m.type = "button";
+        m.className = "card__dropdown-item" + (itemClass ? " " + itemClass : "");
+        m.setAttribute("role", "menuitem");
+        m.textContent = label;
+        m.addEventListener("click", function (e) {
+          e.stopPropagation();
+          dropdown.hidden = true;
+          moreBtn.setAttribute("aria-expanded", "false");
+          fn();
+        });
+        dropdown.appendChild(m);
+      }
 
-      var title = document.createElement("h3");
-      title.className = "grid-card__title";
-      var link = document.createElement("a");
-      link.href = item.url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = item.title || item.url;
-      title.appendChild(link);
-      body.appendChild(title);
+      addMenuItem("Mở", function () {
+        window.open(item.url, "_blank", "noopener,noreferrer");
+      });
+      addMenuItem("Sửa", function () {
+        openEdit(item);
+      });
+      addMenuItem("Sao chép", function () {
+        copyUrl(item.url);
+      });
+      addMenuItem(item.pinned ? "Bỏ ghim" : "Ghim lên đầu", function () {
+        togglePinItem(item.id);
+      });
+      addMenuItem(
+        "Xóa",
+        function () {
+          performDeleteItem(item.id);
+        },
+        "card__dropdown-item--danger"
+      );
 
-      var meta = document.createElement("p");
-      meta.className = "grid-card__meta";
-      meta.textContent =
-        formatLabel(item.format || "website") + " · " + formatRelativeTime(item.createdAt);
-      body.appendChild(meta);
+      moreBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var willOpen = dropdown.hidden;
+        closeAllCardMenus();
+        closeSortMenu();
+        if (willOpen) {
+          dropdown.hidden = false;
+          moreBtn.setAttribute("aria-expanded", "true");
+        }
+      });
 
-      card.appendChild(body);
-      buildCardFooter(item, card);
+      menuWrap.appendChild(moreBtn);
+      menuWrap.appendChild(dropdown);
       li.appendChild(card);
+      li.appendChild(menuWrap);
       listEl.appendChild(li);
     });
 
@@ -2428,44 +1689,31 @@
     document.body.removeChild(ta);
   }
 
-  function syncNoteInputFromItem(note) {
-    var ni = $("noteInput");
-    if (!ni) return;
-    ni.value = note || "";
-    syncEditFormCounters();
-  }
-
-  function openEdit(item, formOverrides) {
-    formOverrides = formOverrides || {};
-    ensureItemMeta(item);
-    closeQuickSheet();
+  function openEdit(item) {
     state.editingId = item.id;
+    $("editId").value = item.id;
+    $("urlInput").value = item.url;
+    $("titleInput").value = item.title;
+    $("noteInput").value = item.note || "";
     state.formTags = (item.tags || []).slice();
     state.formTagPickerExtra = [];
     state.formTagManageMode = false;
     state.formTagAddOpen = false;
     state.formInfoOpen = false;
     state.editTitleTouched = false;
-    openModal();
-    $("editId").value = item.id;
-    $("urlInput").value = item.url;
-    $("titleInput").value = formOverrides.title != null ? formOverrides.title : item.title;
-    syncNoteInputFromItem(formOverrides.note != null ? formOverrides.note : item.note);
     syncFormInfoUi();
     syncFormTagManageUi();
     renderFormTagChips();
     updateSourceBadge();
-    syncEditFormCounters();
+    openModal();
     renderFormPreview();
     runEditAutoTitle(false);
   }
 
   function render() {
     updateSortHint();
-    renderSidebar();
     renderTagFilters();
     renderList();
-    updateProfileStats();
     syncSortMenuItems();
     updateSortMenuIcon();
     updateSearchChipIndicator();
@@ -2473,12 +1721,10 @@
 
   function init() {
     state.items = load();
-    state.items = state.items.map(function (it) {
-      return ensureItemMeta(it);
-    });
     state.deletedTags = loadDeletedTags();
+    persist();
 
-    on("btnQuickAdd", "click", function (e) {
+    $("btnQuickAdd").addEventListener("click", function (e) {
       e.stopPropagation();
       quickAddFromHeader();
     });
@@ -2514,7 +1760,7 @@
       });
     }
 
-    on("itemForm", "click", function (e) {
+    $("itemForm").addEventListener("click", function (e) {
       if (state.formTagManageMode) return;
       var addChip = e.target.closest(".form-tag-chip--add");
       if (!addChip) return;
@@ -2527,24 +1773,20 @@
       if (state.formTagAddOpen) $("tagInput").focus();
     });
 
-    on("modalClose", "click", closeModal);
-    on("modalBackdrop", "click", closeModal);
-    on("btnCopyEditUrl", "click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      var url = $("urlInput").value.trim();
-      if (url) copyUrl(url);
-    });
+    $("modalClose").addEventListener("click", closeModal);
+    $("modalBackdrop").addEventListener("click", closeModal);
+    $("btnCancel").addEventListener("click", closeModal);
 
-    on("btnFormTagAdd", "click", function (e) {
-      e.preventDefault();
+    var formInfoPopover = $("formInfoPopover");
+    if (formInfoPopover) {
+      formInfoPopover.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+    }
+
+    $("btnToggleNote").addEventListener("click", function (e) {
       e.stopPropagation();
-      state.formTagAddOpen = !state.formTagAddOpen;
-      renderFormTagChips();
-      if (state.formTagAddOpen) {
-        var inp = $("tagInput");
-        if (inp) inp.focus();
-      }
+      setFormInfoOpen(!state.formInfoOpen);
     });
 
     window.addEventListener(
@@ -2555,32 +1797,24 @@
       { passive: true }
     );
 
-    on("btnToggleSearch", "click", function (e) {
+    $("btnToggleSearch").addEventListener("click", function (e) {
       e.stopPropagation();
       setSearchExpanded(!state.searchExpanded);
     });
 
-    on("searchInput", "focus", function () {
+    $("searchInput").addEventListener("focus", function () {
       setSearchExpanded(true);
     });
 
-    on("searchInput", "input", function () {
+    $("searchInput").addEventListener("input", function () {
       state.search = $("searchInput").value.trim();
       render();
     });
 
-    on("btnSortMenu", "click", function (e) {
-      e.preventDefault();
+    $("btnSortMenu").addEventListener("click", function (e) {
       e.stopPropagation();
       toggleSortMenu();
     });
-
-    var sortPopover = $("sortMenuPopover");
-    if (sortPopover) {
-      sortPopover.addEventListener("click", function (e) {
-        e.stopPropagation();
-      });
-    }
 
     document.querySelectorAll("#sortMenuPopover [data-sort-mode]").forEach(function (btn) {
       btn.addEventListener("click", function (e) {
@@ -2591,125 +1825,70 @@
     });
 
     document.addEventListener("click", function (e) {
-      if (state.sortSuppressDocClose) {
-        state.sortSuppressDocClose = false;
-      } else if (!e.target.closest("#sortMenuWrap")) {
-        closeSortMenu();
-      }
+      closeSortMenu();
       closeAllCardMenus();
       closeFormInfoPopover();
-      if (!e.target.closest("#profileSheet")) closeProfileSheet();
-      if (!e.target.closest("#settingsSheet") && !e.target.closest("#btnAppMenu")) {
-        closeSettingsSheet();
-      }
-      if (state.sidebarSuppressDocClose) {
-        state.sidebarSuppressDocClose = false;
-        return;
-      }
-      if (document.body.classList.contains("sidebar-open")) {
-        if (
-          !e.target.closest("#sidebar") &&
-          !e.target.closest("#btnSidebar") &&
-          !e.target.closest("#sidebarScrim")
-        ) {
-          setSidebarOpen(false);
-        }
-      }
+      closeAppMenu();
     });
 
-    on("btnAppMenu", "click", function (e) {
+    $("btnAppMenu").addEventListener("click", function (e) {
       e.stopPropagation();
-      toggleSettingsSheet();
+      toggleAppMenu();
     });
 
-    on("settingsSheetBackdrop", "click", closeSettingsSheet);
-    on("settingsSheetClose", "click", closeSettingsSheet);
-
-    on("btnHeaderProfile", "click", function (e) {
+    $("btnOpenTheme").addEventListener("click", function (e) {
       e.stopPropagation();
-      var sheet = $("profileSheet");
-      if (sheet && !sheet.hidden) closeProfileSheet();
-      else openProfileSheet();
+      showAppMenuSettings();
     });
 
-    on("profileSheetBackdrop", "click", closeProfileSheet);
-    on("profileSheetClose", "click", closeProfileSheet);
+    $("btnSettingsBack").addEventListener("click", function (e) {
+      e.stopPropagation();
+      showAppMenuHome();
+    });
 
-    var btnViewGrid = $("btnViewGrid");
-    var btnViewList = $("btnViewList");
-    if (btnViewGrid) {
-      btnViewGrid.addEventListener("click", function () {
-        setViewMode("grid");
-      });
-    }
-    if (btnViewList) {
-      btnViewList.addEventListener("click", function () {
-        setViewMode("list");
-      });
-    }
-    setViewMode(state.viewMode);
+    $("btnOpenColorTheme").addEventListener("click", function (e) {
+      e.stopPropagation();
+      showAppMenuTheme();
+    });
 
-    on("urlInput", "input", function () {
-      syncMetaFromUrl();
+    $("btnThemeBack").addEventListener("click", function (e) {
+      e.stopPropagation();
+      showAppMenuSettings();
+    });
+
+    $("btnThemeReset").addEventListener("click", function (e) {
+      e.stopPropagation();
+      var applied = applyAccentHex(DEFAULT_ACCENT);
+      saveThemeAccentOnly(applied);
+      syncThemeUi(applied);
+      renderThemeColorUi();
+      showToast("Đã khôi phục màu mặc định");
+    });
+
+    $("appMenuScrim").addEventListener("click", function (e) {
+      e.stopPropagation();
+      closeAppMenu();
+    });
+
+    $("appMenuClose").addEventListener("click", function (e) {
+      e.stopPropagation();
+      closeAppMenu();
+    });
+
+    $("appMenuPanel").addEventListener("click", function (e) {
+      e.stopPropagation();
+    });
+
+    $("urlInput").addEventListener("input", function () {
+      updateSourceBadge();
       renderFormPreview();
       scheduleEditAutoTitle();
     });
-
-    on("titleInput", "input", function () {
+    $("titleInput").addEventListener("input", function () {
       state.editTitleTouched = true;
-      syncEditFormCounters();
       renderFormPreview();
     });
-    var btnSidebar = $("btnSidebar");
-    var sidebarScrim = $("sidebarScrim");
-    if (btnSidebar) {
-      btnSidebar.addEventListener("click", function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var willOpen = !document.body.classList.contains("sidebar-open");
-        if (willOpen) state.sidebarSuppressDocClose = true;
-        setSidebarOpen(willOpen);
-      });
-    }
-    if (sidebarScrim) {
-      sidebarScrim.addEventListener("click", function (e) {
-        e.stopPropagation();
-        setSidebarOpen(false);
-      });
-    }
-    var sidebarEl = $("sidebar");
-    if (sidebarEl) {
-      sidebarEl.addEventListener("click", function (e) {
-        e.stopPropagation();
-      });
-    }
-    window.addEventListener("resize", function () {
-      if (!isMobileLayout()) setSidebarOpen(false);
-      else syncSidebarA11y();
-    });
-
-    $("quickSheetClose").addEventListener("click", closeQuickSheet);
-    $("quickSheetBackdrop").addEventListener("click", closeQuickSheet);
-    $("btnSheetCancel").addEventListener("click", closeQuickSheet);
-    $("btnSheetSave").addEventListener("click", saveQuickSheet);
-    $("btnSheetFullEdit").addEventListener("click", function () {
-      var id = state.sheetEditingId;
-      if (!id) return;
-      var item = state.items.find(function (x) {
-        return x.id === id;
-      });
-      if (item) {
-        openEdit(item, {
-          title: $("sheetTitleInput").value.trim() || item.title,
-          note: $("sheetNoteInput").value,
-        });
-        closeQuickSheet();
-      }
-    });
-    $("noteInput").addEventListener("input", function () {
-      syncEditFormCounters();
-      renderFormPreview();
-    });
+    $("noteInput").addEventListener("input", renderFormPreview);
 
     $("tagInput").addEventListener("keydown", function (e) {
       if (e.key === "Enter") {
@@ -2719,7 +1898,7 @@
       }
     });
 
-    setFormUrlGroupVisible(true);
+    setFormUrlGroupVisible(false);
 
     $("itemForm").addEventListener("submit", function (e) {
       e.preventDefault();
@@ -2748,8 +1927,6 @@
           detectSource(url) === "facebook" &&
           (x.url || "").trim() === url &&
           x.thumbUrl;
-        var src = detectSource(url);
-        var fmt = detectFormat(url, src);
         var o = {
           id: x.id,
           url: url,
@@ -2758,11 +1935,9 @@
           tags: state.formTags.slice(),
           createdAt: x.createdAt,
           pinned: !!x.pinned,
-          source: src,
-          format: fmt,
         };
         if (keepThumb) o.thumbUrl = x.thumbUrl;
-        return ensureItemMeta(o);
+        return o;
       });
 
       if (prevUrl !== url) {
@@ -2785,19 +1960,12 @@
 
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") {
-        if (document.body.classList.contains("sidebar-open") && isMobileLayout()) {
-          setSidebarOpen(false);
-        } else if (!$("quickSheet").hidden) {
-          closeQuickSheet();
-        } else if (!$("modal").hidden) {
+        if (!$("modal").hidden) {
           if (state.formTagManageMode) setFormTagManageMode(false);
           else if (state.formInfoOpen) closeFormInfoPopover();
           else closeModal();
-        } else if ($("settingsSheet") && !$("settingsSheet").hidden) {
-          closeSettingsSheet();
-        } else if ($("profileSheet") && !$("profileSheet").hidden) {
-          closeProfileSheet();
-        } else {
+        } else if ($("appMenu") && !$("appMenu").hidden) closeAppMenu();
+        else {
           closeSortMenu();
           closeAllCardMenus();
           if (state.formTagManageMode) setFormTagManageMode(false);
@@ -2814,8 +1982,6 @@
     loadTheme();
     renderThemeColorUi();
     render();
-    syncSortMenuLabel();
-    syncSidebarA11y();
     refreshNetworkUi();
   }
 
@@ -2824,7 +1990,7 @@
   }
 
   ensureFreshBuild(function () {
-    boot();
     registerServiceWorker();
+    boot();
   });
 })();

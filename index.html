@@ -3,316 +3,269 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b84c4" />
-  <meta name="application-name" content="Save Social" />
+  <meta name="theme-color" content="#7C5CFC" />
+  <meta name="application-name" content="SaveS" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Save Social" />
+  <meta name="apple-mobile-web-app-title" content="SaveS" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="save-social-build" content="202605187" />
+  <meta name="save-social-build" content="202605219" />
   <meta http-equiv="Cache-Control" content="no-cache" />
-  <title>Save Social</title>
-  <script src="version.js?v=202605187"></script>
-  <link rel="manifest" href="manifest.webmanifest?v=202605187" />
-  <link rel="icon" href="assets/favicon.ico?v=202605187" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=202605187" />
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=202605187" />
-  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=202605187" />
-  <link rel="stylesheet" href="styles.css?v=202605187" />
+  <title>SaveS — Save Social</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="version.js?v=202605219"></script>
+  <link rel="manifest" href="manifest.webmanifest?v=202605219" />
+  <link rel="icon" href="assets/favicon.ico?v=202605219" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=202605219" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=202605219" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=202605219" />
+  <link rel="stylesheet" href="styles.css?v=202605219" />
+  <link rel="stylesheet" href="layout.css?v=202605219" />
 </head>
 <body>
-  <div class="app">
-    <header class="header" id="appHeader" aria-label="Save Social">
-      <h1 class="visually-hidden">Save Social</h1>
-      <div class="header__top">
-        <div class="header__menu-slot">
-          <button
-            type="button"
-            id="btnAppMenu"
-            class="toolbar__icon-btn"
-            aria-expanded="false"
-            aria-controls="appMenuPanel"
-            title="Menu"
-            aria-label="Mở menu"
-          >
-            <svg class="toolbar__svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-              <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            </svg>
-          </button>
-        </div>
-        <div class="header__add-slot">
-          <form class="header__url-form" autocomplete="off" onsubmit="return false">
-            <input
-              type="text"
-              class="header__url-decoy"
-              tabindex="-1"
-              aria-hidden="true"
-              autocomplete="username"
-              value=""
-            />
-            <input
-              type="password"
-              class="header__url-decoy"
-              tabindex="-1"
-              aria-hidden="true"
-              autocomplete="new-password"
-              value=""
-            />
-            <div class="header__url-wrap">
-              <button
-                type="button"
-                id="btnHeaderPaste"
-                class="header__url-paste-btn"
-                aria-label="Dán link từ clipboard"
-              >
-                Dán
-              </button>
-              <input
-                type="text"
-                id="headerUrlInput"
-                class="header__url-input"
-                placeholder="Chạm ô để sửa · nhấn + để lưu"
-                autocomplete="one-time-code"
-                autocapitalize="off"
-                autocorrect="off"
-                spellcheck="false"
-                enterkeyhint="done"
-                aria-label="Liên kết cần lưu"
-              />
-            </div>
-          </form>
-          <button type="button" id="btnQuickAdd" class="toolbar__icon-btn toolbar__icon-btn--quick-add" title="Thêm nhanh" aria-label="Thêm link đã dán">
-            <svg class="toolbar__svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            </svg>
-          </button>
-        </div>
+  <div class="app-shell" id="appShell">
+    <button type="button" class="sidebar-scrim" id="sidebarScrim" hidden aria-label="Đóng bộ lọc"></button>
+    <aside class="sidebar" id="sidebar" aria-label="Menu bên" aria-hidden="true">
+      <div class="sidebar__brand">
+        <span class="sidebar__logo">SaveS</span>
+        <span class="sidebar__tagline">Save Social</span>
       </div>
-    </header>
+      <div id="sidebarFiltersView" class="sidebar__panel">
+        <nav class="sidebar__section" aria-label="Nguồn">
+          <h2 class="sidebar__heading">Nguồn</h2>
+          <div id="sidebarSources" class="sidebar__nav" role="group"></div>
+        </nav>
+        <nav class="sidebar__section" aria-label="Định dạng">
+          <h2 class="sidebar__heading">Định dạng</h2>
+          <div id="sidebarFormats" class="sidebar__nav" role="group"></div>
+        </nav>
+      </div>
 
-    <section class="filters" id="filtersPanel" aria-label="Lọc thẻ và sắp xếp">
-      <div class="filters__row">
-        <div class="filters__tags-wrap filters__tags-wrap--stack">
-          <div
-            id="tagFilters"
-            class="chip-row filters__tags"
-            role="group"
-            aria-label="Lọc thẻ và tìm kiếm"
-          >
-            <span id="filtersSearchBundle" class="filters__search-bundle">
-              <button
-                type="button"
-                id="btnToggleSearch"
-                class="toolbar__icon-btn filters__search-icon-btn"
-                aria-expanded="false"
-                aria-controls="searchInputWrap"
-                title="Mở ô tìm kiếm"
-                aria-label="Mở ô tìm kiếm"
-              >
-                <svg class="toolbar__svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2" />
-                  <path d="M16 16l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                </svg>
-              </button>
-            </span>
-          </div>
-          <div id="searchInputWrap" class="form-tag-input-wrap filters__search-input-full" hidden aria-hidden="true">
-            <label class="visually-hidden" for="searchInput">Tìm theo tiêu đề, ghi chú hoặc thẻ</label>
-            <input
-              type="search"
-              id="searchInput"
-              class="input input--tag-inline"
-              placeholder="Tiêu đề, ghi chú, thẻ…"
-              autocomplete="off"
-            />
-          </div>
+      <div class="sidebar__foot">
+        <button type="button" id="btnAppMenu" class="sidebar__settings-btn" aria-expanded="false" aria-controls="settingsSheet">
+          Cài đặt
+        </button>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <div class="main-shell__top">
+      <header class="app-header" aria-label="Thanh công cụ">
+        <button type="button" id="btnSidebar" class="icon-btn app-header__menu" aria-label="Mở menu" aria-expanded="false" aria-controls="sidebar">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="app-header__brand">
+          <span class="app-header__logo">SaveS</span>
+          <h1 class="visually-hidden">SaveS — Save Social</h1>
         </div>
-        <div class="filters__sort">
-          <div class="sort-menu" id="sortMenuWrap">
-            <button
-              type="button"
-              id="btnSortMenu"
-              class="toolbar__icon-btn sort-menu__trigger"
-              aria-expanded="false"
-              aria-haspopup="true"
-              aria-controls="sortMenuPopover"
-              title="Sắp xếp"
-              aria-label="Chọn cách sắp xếp"
-            >
-              <span id="sortMenuIcon" class="sort-menu__icon" aria-hidden="true"></span>
+        <div class="app-header__actions">
+          <button type="button" id="btnToggleSearch" class="icon-btn app-header__icon" aria-expanded="false" aria-controls="searchInputWrap" title="Tìm kiếm" aria-label="Tìm kiếm">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <button type="button" id="btnHeaderProfile" class="app-header__avatar" aria-label="Hồ sơ" aria-expanded="false" aria-controls="profileSheet">
+            <span class="app-header__avatar-inner" aria-hidden="true">S</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="quick-save" aria-label="Lưu link nhanh">
+        <form class="quick-save__form" autocomplete="off" onsubmit="return false">
+          <input type="text" class="quick-save__decoy" tabindex="-1" aria-hidden="true" autocomplete="username" value="" />
+          <input type="password" class="quick-save__decoy" tabindex="-1" aria-hidden="true" autocomplete="new-password" value="" />
+          <div class="quick-save__field">
+            <button type="button" id="btnHeaderPaste" class="quick-save__link-btn" aria-label="Dán link từ clipboard">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm8-2v6a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3v-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 4h4v4M10 14L19 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <div id="sortMenuPopover" class="sort-menu__popover" hidden role="menu">
-              <button type="button" class="sort-menu__item" role="menuitem" data-sort-mode="newest">
-                <span class="sort-menu__item-icon" aria-hidden="true"></span>
-                Mới nhất
-              </button>
-              <button type="button" class="sort-menu__item" role="menuitem" data-sort-mode="title">
-                <span class="sort-menu__item-icon" aria-hidden="true"></span>
-                Theo tên A–Z
-              </button>
-              <button type="button" class="sort-menu__item" role="menuitem" data-sort-mode="manual">
-                <span class="sort-menu__item-icon" aria-hidden="true"></span>
-                Tự kéo (thứ tự)
-              </button>
+            <input type="text" id="headerUrlInput" class="quick-save__input" placeholder="Dán link vào đây để lưu nhanh…" autocomplete="one-time-code" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Liên kết cần lưu" />
+            <button type="button" id="btnQuickAdd" class="quick-save__add" title="Lưu nhanh" aria-label="Lưu link">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </form>
+        <div id="searchInputWrap" class="quick-save__search" hidden>
+          <label class="visually-hidden" for="searchInput">Tìm kiếm</label>
+          <input type="search" id="searchInput" class="input" placeholder="Tiêu đề, ghi chú, thẻ…" autocomplete="off" />
+        </div>
+      </section>
+      </div>
+
+      <section class="main-tags" aria-label="Lọc thẻ">
+        <div id="tagFilters" class="chip-row main-tags__row" role="group" aria-label="Lọc thẻ"></div>
+      </section>
+
+      <div class="content-toolbar" aria-label="Sắp xếp và hiển thị">
+        <div class="sort-menu content-toolbar__sort" id="sortMenuWrap">
+          <button type="button" id="btnSortMenu" class="content-toolbar__sort-btn sort-menu__trigger" aria-expanded="false" aria-haspopup="true" aria-controls="sortMenuPopover" title="Sắp xếp" aria-label="Chọn cách sắp xếp">
+            <span id="sortMenuIcon" class="sort-menu__icon" aria-hidden="true"></span>
+            <span id="sortMenuLabel" class="content-toolbar__sort-label">Mới nhất</span>
+            <svg class="content-toolbar__chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <div id="sortMenuPopover" class="sort-menu__popover" hidden role="menu">
+            <button type="button" class="sort-menu__item" role="menuitem" data-sort-mode="newest"><span class="sort-menu__item-icon" aria-hidden="true"></span>Mới nhất</button>
+            <button type="button" class="sort-menu__item" role="menuitem" data-sort-mode="title"><span class="sort-menu__item-icon" aria-hidden="true"></span>Theo tên A–Z</button>
+            <button type="button" class="sort-menu__item" role="menuitem" data-sort-mode="manual"><span class="sort-menu__item-icon" aria-hidden="true"></span>Tự kéo (thứ tự)</button>
+          </div>
+        </div>
+        <p class="content-toolbar__count" id="resultCount" aria-live="polite"></p>
+        <div class="content-toolbar__views" role="group" aria-label="Chế độ xem">
+          <button type="button" id="btnViewGrid" class="content-toolbar__view is-active" aria-pressed="true" title="Lưới" aria-label="Xem dạng lưới">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5" fill="currentColor"/><rect x="13" y="4" width="7" height="7" rx="1.5" fill="currentColor"/><rect x="4" y="13" width="7" height="7" rx="1.5" fill="currentColor"/><rect x="13" y="13" width="7" height="7" rx="1.5" fill="currentColor"/></svg>
+          </button>
+          <button type="button" id="btnViewList" class="content-toolbar__view" aria-pressed="false" title="Danh sách" aria-label="Xem dạng danh sách">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <p class="main-shell__hint filters__hint" id="sortHint" hidden></p>
+
+      <main class="main-content">
+        <ul class="masonry masonry--grid" id="itemList"></ul>
+        <div class="empty" id="emptyState" hidden>
+          <p class="empty__title">Chưa có liên kết nào</p>
+          <p class="empty__text">Copy link → dán vào ô phía trên → nhấn <strong>+</strong> để lưu.</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="sheet settings-sheet" id="settingsSheet" hidden>
+    <div class="sheet__backdrop" id="settingsSheetBackdrop"></div>
+    <div class="sheet__panel settings-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="settingsSheetTitle">
+      <div class="settings-sheet__head">
+        <h2 id="settingsSheetTitle" class="settings-sheet__title">Cài đặt</h2>
+        <button type="button" class="icon-btn settings-sheet__close" id="settingsSheetClose" aria-label="Đóng">×</button>
+      </div>
+      <section class="settings-sheet__section settings-sheet__section--theme" aria-labelledby="themeCustomizeTitle">
+        <div class="theme-customize" aria-label="Tùy chỉnh màu sắc">
+          <h3 id="themeCustomizeTitle" class="theme-customize__title">Tùy chỉnh màu sắc</h3>
+          <p class="theme-customize__lead">Chọn màu chủ đạo cho giao diện</p>
+          <div class="theme-presets theme-presets--mockup" id="sidebarThemePresets" role="group" aria-label="Màu có sẵn"></div>
+          <div class="theme-custom">
+            <label class="theme-custom__label" for="themeCustomHex">Hoặc chọn màu tùy chỉnh</label>
+            <div class="theme-custom__field">
+              <span class="theme-custom__preview" id="themeCustomPreview" aria-hidden="true"></span>
+              <input type="text" id="themeCustomHex" class="theme-custom__input" inputmode="text" autocomplete="off" spellcheck="false" maxlength="7" placeholder="#7C5CFC" aria-label="Mã màu hex" />
             </div>
           </div>
         </div>
-      </div>
-      <p class="filters__hint" id="sortHint" hidden></p>
-    </section>
-
-    <main class="main">
-      <p class="main__count" id="resultCount" aria-live="polite"></p>
-      <ul class="list" id="itemList"></ul>
-      <div class="empty" id="emptyState" hidden>
-        <p class="empty__title">Chưa có liên kết nào</p>
-        <p class="empty__text">Copy link → mở app → nhấn <strong>Dán</strong> → nhấn <strong>+</strong> để lưu.</p>
-      </div>
-    </main>
+      </section>
+    </div>
   </div>
-
-  <div class="app-menu" id="appMenu" hidden>
-    <button type="button" class="app-menu__scrim" id="appMenuScrim" tabindex="-1" aria-label="Đóng menu"></button>
-    <nav class="app-menu__drawer" id="appMenuPanel" aria-label="Menu ứng dụng">
-      <div class="app-menu__head">
-        <span class="app-menu__title">Save Social</span>
-        <div class="app-menu__head-tools">
-          <button
-            type="button"
-            id="btnOpenTheme"
-            class="toolbar__icon-btn app-menu__gear"
-            title="Cài đặt"
-            aria-label="Cài đặt"
-            aria-controls="appMenuSettingsBody"
-            aria-expanded="false"
-          >
-            <svg class="toolbar__svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-              <path
-                d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96c-.5-.38-1.04-.7-1.62-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.58.24-1.12.56-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.74 8.84c-.13.22-.08.5.12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.25.44.33.7.22l2.39-.96c.5.38 1.04.7 1.62.94l.36 2.54c.05.24.27.42.49.42h3.84c.22 0 .44-.18.49-.42l.36-2.54c.58-.24 1.12-.56 1.62-.94l2.39.96c.26.11.56.03.7-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 15.6 12 3.6 3.6 0 0 1 12 15.6z"
-                fill="currentColor"
-              />
-            </svg>
-          </button>
-          <button type="button" class="icon-btn app-menu__close" id="appMenuClose" aria-label="Đóng menu">×</button>
+  <div class="sheet profile-sheet" id="profileSheet" hidden>
+    <div class="sheet__backdrop" id="profileSheetBackdrop"></div>
+    <div class="sheet__panel profile-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="profileSheetTitle">
+      <div class="profile-sheet__head">
+        <h2 id="profileSheetTitle" class="profile-sheet__title">Hồ sơ</h2>
+        <button type="button" class="icon-btn profile-sheet__close" id="profileSheetClose" aria-label="Đóng">×</button>
+      </div>
+      <div class="profile-sheet__hero">
+        <div class="profile-sheet__avatar" aria-hidden="true">
+          <span class="profile-sheet__avatar-letter">S</span>
         </div>
+        <p class="profile-sheet__name">SaveS</p>
+        <p class="profile-sheet__tagline">Save Social</p>
       </div>
-      <div id="appMenuHomeBody" class="app-menu__home">
-        <p class="app-menu__hint">Dữ liệu chỉ lưu trên thiết bị. Nhấn biểu tượng bánh răng để mở Cài đặt.</p>
+      <div class="profile-sheet__stat">
+        <span id="profileStatCount" class="profile-sheet__stat-value">0</span>
+        <span class="profile-sheet__stat-label">liên kết đã lưu</span>
       </div>
-      <div id="appMenuSettingsBody" class="app-menu__settings" hidden>
-        <button type="button" class="app-menu__back" id="btnSettingsBack">← Trở lại</button>
-        <h2 class="app-menu__page-title">Cài đặt</h2>
-        <button type="button" class="app-menu__nav-row" id="btnOpenColorTheme">
-          <span class="app-menu__nav-row-label">Tùy chỉnh color</span>
-          <span class="app-menu__nav-row-chevron" aria-hidden="true">›</span>
-        </button>
+      <p class="profile-sheet__hint">Dữ liệu chỉ lưu trên thiết bị này. Không đồng bộ đám mây.</p>
+      <p class="profile-sheet__hint profile-sheet__hint--sub">Tùy chỉnh màu: bấm <strong>Cài đặt</strong> ở menu trái.</p>
+    </div>
+  </div>
+  <div class="sheet" id="quickSheet" hidden>
+    <div class="sheet__backdrop" id="quickSheetBackdrop"></div>
+    <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="quickSheetTitle">
+      <div class="sheet__head">
+        <h2 id="quickSheetTitle" class="sheet__title">Sửa nhanh</h2>
+        <button type="button" class="icon-btn" id="quickSheetClose" aria-label="Đóng">×</button>
       </div>
-      <div id="appMenuThemeBody" class="app-menu__theme" hidden>
-        <button type="button" class="app-menu__back" id="btnThemeBack">← Trở lại</button>
-        <h2 class="app-menu__page-title">Tùy chỉnh color</h2>
-        <p class="app-menu__theme-lead">Chọn màu chủ đạo — nút, chip và thẻ ghim sẽ theo màu này.</p>
-        <section class="theme-color-section" aria-label="Danh sách màu">
-          <div class="theme-presets theme-presets--in-section" id="themePresets" role="group" aria-label="Màu có sẵn"></div>
-        </section>
-        <button type="button" class="btn btn--ghost btn--sm theme-reset theme-reset--outside" id="btnThemeReset">
-          Khôi phục mặc định
-        </button>
+      <div class="sheet__body">
+        <label class="label-block" for="sheetTitleInput">Tiêu đề</label>
+        <input type="text" id="sheetTitleInput" class="input" maxlength="300" />
+        <label class="label-block" for="sheetNoteInput">Ghi chú</label>
+        <textarea id="sheetNoteInput" class="input input--textarea input--note-compact" rows="2" maxlength="500"></textarea>
+        <button type="button" class="btn btn--ghost btn--sm sheet__full-edit" id="btnSheetFullEdit">Chỉnh đầy đủ…</button>
       </div>
-    </nav>
+      <div class="sheet__actions">
+        <button type="button" class="btn btn--ghost" id="btnSheetCancel">Hủy</button>
+        <button type="button" class="btn btn--primary" id="btnSheetSave">Lưu</button>
+      </div>
+    </div>
   </div>
 
-  <div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal edit-modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal__backdrop" id="modalBackdrop"></div>
-    <div class="modal__panel">
-      <div class="modal__head">
-        <h2 id="modalTitle" class="modal__title">Sửa liên kết</h2>
-        <button type="button" class="icon-btn" id="modalClose" aria-label="Đóng">×</button>
-      </div>
-      <form id="itemForm" class="form">
+    <div class="modal__panel edit-modal__panel">
+      <header class="edit-modal__header">
+        <button type="button" class="edit-modal__back" id="modalClose" aria-label="Quay lại">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 id="modalTitle" class="edit-modal__title">Chỉnh sửa link</h2>
+        <button type="submit" class="btn btn--primary edit-modal__save" form="itemForm" id="btnSave">Lưu</button>
+      </header>
+      <form id="itemForm" class="edit-form">
         <input type="hidden" id="editId" value="" />
-        <div class="form__group" id="formUrlGroup" hidden>
-          <label class="visually-hidden" for="urlInput">URL</label>
-          <input type="url" id="urlInput" class="input" placeholder="https://…" />
-          <div class="form__meta">
-            <span class="badge" id="sourceBadge">—</span>
-          </div>
-        </div>
-        <div class="form__group">
-          <label class="visually-hidden" for="titleInput">Tiêu đề</label>
-          <div class="form__title-row">
-            <input
-              type="text"
-              id="titleInput"
-              class="input form__title-input"
-              required
-              maxlength="300"
-              placeholder="Tiêu đề"
-            />
-            <button
-              type="button"
-              id="btnToggleNote"
-              class="form-note-info-btn"
-              aria-label="Thông tin"
-              aria-expanded="false"
-              aria-controls="formInfoPopover"
-              title="Thông tin"
-            >
-              <svg class="form-note-info-btn__svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" />
-                <path d="M12 10v6M12 7h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              </svg>
+        <select id="sourceSelect" class="input input--select" aria-label="Nguồn" hidden></select>
+        <select id="formatSelect" class="input input--select" aria-label="Định dạng" hidden></select>
+        <div id="formPreview" class="edit-preview" hidden aria-live="polite"></div>
+        <span id="sourceBadge" class="badge edit-preview__badge" hidden>—</span>
+
+        <div class="edit-field" id="formUrlGroup">
+          <label class="edit-field__label" for="urlInput">URL</label>
+          <div class="edit-field__control edit-field__control--url">
+            <span class="edit-field__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 11a5 5 0 0 0-7.07 0L5.52 12.41a5 5 0 1 0 7.07 7.07L14 19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            <input type="url" id="urlInput" class="edit-field__input" placeholder="https://…" />
+            <button type="button" class="edit-field__action" id="btnCopyEditUrl" aria-label="Sao chép URL" title="Sao chép">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
             </button>
           </div>
-          <div id="formPreview" class="form-preview" hidden aria-live="polite"></div>
         </div>
-        <div class="form__group">
-          <label for="noteInput">Ghi chú</label>
-          <textarea
-            id="noteInput"
-            class="input input--textarea input--note-compact"
-            rows="2"
-            maxlength="500"
-            placeholder="Tùy chọn…"
-          ></textarea>
-        </div>
-        <div class="form__group form__group--tags">
-          <div class="form-tags-head">
-            <span class="label-block form-tags-head__label">Thẻ</span>
-            <button
-              type="button"
-              id="btnFormTagManage"
-              class="form-tags-manage-btn"
-              aria-pressed="false"
-              aria-controls="formTagChips"
-            >
-              Quản lý
-            </button>
-          </div>
-          <p id="formTagManageHint" class="form-tags-manage-hint" hidden>
-            Chạm × để xóa thẻ khỏi toàn bộ thư viện
-          </p>
-          <div id="formTagsToolbar" class="form-tags-toolbar">
-            <div id="formTagChips" class="form-tag-chips" role="group" aria-label="Chọn thẻ"></div>
-            <div id="formTagInputWrap" class="form-tag-input-wrap" hidden>
-              <input type="text" id="tagInput" class="input input--tag-inline" placeholder="Tên thẻ — Enter để thêm" autocomplete="off" />
-            </div>
+
+        <div class="edit-field">
+          <label class="edit-field__label" for="titleInput">Tiêu đề</label>
+          <div class="edit-field__control edit-field__control--count">
+            <input type="text" id="titleInput" class="edit-field__input" required maxlength="100" placeholder="Tiêu đề" />
+            <span id="titleCharCount" class="edit-field__count" aria-live="polite">0/100</span>
           </div>
         </div>
-        <div class="form__actions">
-          <button type="button" class="btn btn--ghost" id="btnCancel">Hủy</button>
-          <button type="submit" class="btn btn--primary" id="btnSave">Lưu</button>
+
+        <div class="edit-field">
+          <label class="edit-field__label" for="noteInput">Ghi chú nhanh</label>
+          <div class="edit-field__control edit-field__control--textarea">
+            <textarea id="noteInput" class="edit-field__textarea" rows="3" maxlength="200" placeholder="Ghi chú tùy chọn…"></textarea>
+            <span id="noteCharCount" class="edit-field__count edit-field__count--textarea" aria-live="polite">0/200</span>
+          </div>
+        </div>
+
+        <div class="edit-field edit-field--tags">
+          <div class="edit-field__label-row">
+            <label class="edit-field__label" for="tagInput">Tags</label>
+            <span class="edit-tags__hint">Bấm thẻ chọn/bỏ · × xóa thẻ</span>
+          </div>
+          <div id="formTagsToolbar" class="edit-tags">
+            <div id="formTagChips" class="edit-tags__list" role="group" aria-label="Chọn hoặc bỏ thẻ"></div>
+            <button type="button" id="btnFormTagAdd" class="edit-tags__add" aria-label="Thêm thẻ" aria-expanded="false" aria-controls="formTagInputWrap">+</button>
+          </div>
+          <div id="formTagInputWrap" class="edit-tags__input-wrap" hidden>
+            <input type="text" id="tagInput" class="edit-field__input" placeholder="Tên thẻ — Enter để thêm" autocomplete="off" />
+          </div>
+          <button type="button" id="btnFormTagManage" class="edit-tags__manage visually-hidden" aria-pressed="false" aria-controls="formTagChips" tabindex="-1">Quản lý</button>
+          <p id="formTagManageHint" class="form-tags-manage-hint visually-hidden" hidden>Chạm × để xóa thẻ khỏi toàn bộ thư viện</p>
         </div>
       </form>
     </div>
   </div>
 
   <div id="formInfoPopover" class="form-info-popover" hidden role="tooltip">
-    <p id="fetchHint" class="form-info-popover__text">
-      Tiêu đề cập nhật tự động khi mở và khi đổi URL.
-    </p>
+    <p id="fetchHint" class="form-info-popover__text">Tiêu đề cập nhật tự động khi mở và khi đổi URL.</p>
   </div>
 
   <div class="toast" id="toast" hidden role="status"></div>
 
-  <script src="app.js?v=202605187"></script>
+  <script src="app.js?v=202605219"></script>
 </body>
 </html>

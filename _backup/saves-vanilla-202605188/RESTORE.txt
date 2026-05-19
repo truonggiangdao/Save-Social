@@ -1,0 +1,6 @@
+﻿SaveS vanilla PWA backup
+Build: 202605188
+Date: 2026-05-18
+Stack: HTML + CSS + JS + Service Worker (no Next.js)
+
+Restore: copy all files from this folder back to project root (overwrite).
