@@ -2034,6 +2034,52 @@
     );
   }
 
+  function extractShareUrl(urlParam, textParam) {
+    var raw = (urlParam || "").trim();
+    if (raw) {
+      try {
+        new URL(raw);
+        return raw;
+      } catch (e) {}
+    }
+    var text = (textParam || raw || "").trim();
+    if (!text) return "";
+    try {
+      new URL(text);
+      return text;
+    } catch (e) {}
+    var m = text.match(/https?:\/\/[^\s<>"']+/i);
+    if (!m) return "";
+    return m[0].replace(/[)\]},.!?]+$/, "");
+  }
+
+  function consumeIncomingShare() {
+    try {
+      var sp = new URLSearchParams(window.location.search);
+      if (!sp.has("url") && !sp.has("text") && !sp.has("title")) return;
+      var shared = extractShareUrl(sp.get("url"), sp.get("text") || sp.get("title"));
+      if (!shared) return;
+      setHeaderUrlValue(shared);
+      var path = window.location.pathname || "/index.html";
+      if (!path.endsWith(".html") && !path.endsWith("/")) path = "/index.html";
+      history.replaceState(null, "", path + (window.location.hash || ""));
+      showToast("Đã nhận link — nhấn + để lưu");
+    } catch (e) {}
+  }
+
+  var IOS_PASTE_HINT_KEY = "saveSocialIosPasteHint_v1";
+
+  function maybeShowIosPasteHint() {
+    if (!isAppleMobile()) return;
+    try {
+      if (sessionStorage.getItem(IOS_PASTE_HINT_KEY)) return;
+      sessionStorage.setItem(IOS_PASTE_HINT_KEY, "1");
+    } catch (e) {
+      return;
+    }
+    showToast("iPhone: chọn «Paste» khi Safari hỏi — Apple không cho dán thẳng 1 chạm");
+  }
+
   function pasteIntoHeaderFromClipboard() {
     var input = $("headerUrlInput");
     if (!input) return Promise.resolve();
@@ -2046,6 +2092,11 @@
     if (!navigator.clipboard || typeof navigator.clipboard.readText !== "function") {
       promptManualHeaderPaste();
       return Promise.resolve();
+    }
+
+    if (isAppleMobile()) {
+      maybeShowIosPasteHint();
+      input.focus({ preventScroll: true });
     }
 
     return navigator.clipboard
@@ -2511,6 +2562,7 @@
       return ensureItemMeta(it);
     });
     state.deletedTags = loadDeletedTags();
+    consumeIncomingShare();
 
     on("btnQuickAdd", "click", function (e) {
       e.stopPropagation();
