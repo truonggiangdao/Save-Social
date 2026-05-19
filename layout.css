@@ -395,6 +395,25 @@ body.sidebar-open .sidebar,
   padding-top: 0.65rem;
 }
 
+.app-build {
+  margin: 0 0 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-build--main {
+  margin: 0.4rem 0.75rem 0;
+}
+
+.app-build--settings {
+  margin: 0.75rem 0 0;
+  opacity: 0.85;
+}
+
 .sidebar__settings-btn {
   width: 100%;
   min-height: var(--touch-min);

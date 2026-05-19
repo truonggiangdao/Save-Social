@@ -8,20 +8,20 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="SaveS" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="save-social-build" content="202605225" />
+  <meta name="save-social-build" content="202605226" />
   <meta http-equiv="Cache-Control" content="no-cache" />
   <title>SaveS — Save Social</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="version.js?v=202605225"></script>
-  <link rel="manifest" href="manifest.webmanifest?v=202605225" />
-  <link rel="icon" href="assets/favicon.ico?v=202605225" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=202605225" />
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=202605225" />
-  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=202605225" />
-  <link rel="stylesheet" href="styles.css?v=202605225" />
-  <link rel="stylesheet" href="layout.css?v=202605225" />
+  <script src="version.js?v=202605226"></script>
+  <link rel="manifest" href="manifest.webmanifest?v=202605226" />
+  <link rel="icon" href="assets/favicon.ico?v=202605226" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=202605226" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=202605226" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=202605226" />
+  <link rel="stylesheet" href="styles.css?v=202605226" />
+  <link rel="stylesheet" href="layout.css?v=202605226" />
 </head>
 <body>
   <div class="app-shell" id="appShell">
@@ -43,6 +43,7 @@
       </div>
 
       <div class="sidebar__foot">
+        <p class="app-build" id="sidebarBuildLabel">Build …</p>
         <button type="button" id="btnAppMenu" class="sidebar__settings-btn" aria-expanded="false" aria-controls="settingsSheet">
           Cài đặt
         </button>
@@ -87,6 +88,7 @@
           <label class="visually-hidden" for="searchInput">Tìm kiếm</label>
           <input type="search" id="searchInput" class="input" placeholder="Tiêu đề, ghi chú, thẻ…" autocomplete="off" />
         </div>
+        <p class="app-build app-build--main" id="appBuildLabel" aria-live="polite">Build …</p>
       </section>
       </div>
 
@@ -150,6 +152,7 @@
           </div>
         </div>
       </section>
+      <p class="app-build app-build--settings" id="settingsBuildLabel">Build …</p>
     </div>
   </div>
   <div class="sheet profile-sheet" id="profileSheet" hidden>
@@ -266,6 +269,6 @@
 
   <div class="toast" id="toast" hidden role="status"></div>
 
-  <script src="app.js?v=202605225"></script>
+  <script src="app.js?v=202605226"></script>
 </body>
 </html>
