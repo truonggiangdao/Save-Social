@@ -2002,36 +2002,26 @@
     if (el && document.activeElement === el) el.blur();
   }
 
-  function isAppleMobile() {
-    if (typeof navigator === "undefined") return false;
-    var ua = navigator.userAgent || "";
-    if (/iPad|iPhone|iPod/.test(ua)) return true;
-    return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-  }
-
-  function applyPastedHeaderUrl(text) {
-    var raw = (text || "").trim();
-    if (!raw) {
-      showToast("Chưa có link trong clipboard");
-      return false;
-    }
-    setHeaderUrlValue(raw);
+  function pasteIntoHeaderFromClipboard() {
     blurHeaderUrlInput();
-    return true;
-  }
-
-  function promptManualHeaderPaste() {
-    var input = $("headerUrlInput");
-    if (!input) return;
-    input.focus({ preventScroll: true });
-    try {
-      input.setSelectionRange(0, 0);
-    } catch (e) {}
-    showToast(
-      isAppleMobile()
-        ? "Nhấn giữ ô link → Dán, hoặc chọn «Cho phép dán» khi Safari hỏi"
-        : "Nhấn Ctrl+V hoặc nhấn giữ ô link rồi chọn Dán"
-    );
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      showToast("Không đọc được clipboard");
+      return Promise.resolve();
+    }
+    return navigator.clipboard
+      .readText()
+      .then(function (text) {
+        var raw = (text || "").trim();
+        if (!raw) {
+          showToast("Chưa có link trong clipboard");
+          return;
+        }
+        setHeaderUrlValue(raw);
+        blurHeaderUrlInput();
+      })
+      .catch(function () {
+        showToast("Cho phép truy cập clipboard để dán");
+      });
   }
 
   function extractShareUrl(urlParam, textParam) {
@@ -2065,48 +2055,6 @@
       history.replaceState(null, "", path + (window.location.hash || ""));
       showToast("Đã nhận link — nhấn + để lưu");
     } catch (e) {}
-  }
-
-  var IOS_PASTE_HINT_KEY = "saveSocialIosPasteHint_v1";
-
-  function maybeShowIosPasteHint() {
-    if (!isAppleMobile()) return;
-    try {
-      if (sessionStorage.getItem(IOS_PASTE_HINT_KEY)) return;
-      sessionStorage.setItem(IOS_PASTE_HINT_KEY, "1");
-    } catch (e) {
-      return;
-    }
-    showToast("iPhone: chọn «Paste» khi Safari hỏi — Apple không cho dán thẳng 1 chạm");
-  }
-
-  function pasteIntoHeaderFromClipboard() {
-    var input = $("headerUrlInput");
-    if (!input) return Promise.resolve();
-
-    if (!window.isSecureContext) {
-      promptManualHeaderPaste();
-      return Promise.resolve();
-    }
-
-    if (!navigator.clipboard || typeof navigator.clipboard.readText !== "function") {
-      promptManualHeaderPaste();
-      return Promise.resolve();
-    }
-
-    if (isAppleMobile()) {
-      maybeShowIosPasteHint();
-      input.focus({ preventScroll: true });
-    }
-
-    return navigator.clipboard
-      .readText()
-      .then(function (text) {
-        applyPastedHeaderUrl(text);
-      })
-      .catch(function () {
-        promptManualHeaderPaste();
-      });
   }
 
   function quickAddFromHeader() {
