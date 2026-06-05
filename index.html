@@ -8,20 +8,20 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="SaveS" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="save-social-build" content="202605226" />
+  <meta name="save-social-build" content="202605239" />
   <meta http-equiv="Cache-Control" content="no-cache" />
   <title>SaveS — Save Social</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="version.js?v=202605226"></script>
-  <link rel="manifest" href="manifest.webmanifest?v=202605226" />
-  <link rel="icon" href="assets/favicon.ico?v=202605226" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=202605226" />
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=202605226" />
-  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=202605226" />
-  <link rel="stylesheet" href="styles.css?v=202605226" />
-  <link rel="stylesheet" href="layout.css?v=202605226" />
+  <script src="version.js?v=202605239"></script>
+  <link rel="manifest" href="manifest.webmanifest?v=202605239" />
+  <link rel="icon" href="assets/favicon.ico?v=202605239" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=202605239" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=202605239" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=202605239" />
+  <link rel="stylesheet" href="styles.css?v=202605239" />
+  <link rel="stylesheet" href="layout.css?v=202605239" />
 </head>
 <body>
   <div class="app-shell" id="appShell">
@@ -71,24 +71,42 @@
       </header>
 
       <section class="quick-save" aria-label="Lưu link nhanh">
-        <div class="quick-save__row">
+        <div class="quick-save__wrap">
           <form class="quick-save__form" autocomplete="off" onsubmit="return false">
             <input type="text" class="quick-save__decoy" tabindex="-1" aria-hidden="true" autocomplete="username" value="" />
             <input type="password" class="quick-save__decoy" tabindex="-1" aria-hidden="true" autocomplete="new-password" value="" />
-            <div class="quick-save__url-wrap">
-              <button type="button" id="btnHeaderPaste" class="quick-save__link-btn" aria-label="Dán link từ clipboard">Dán</button>
-              <input type="text" id="headerUrlInput" class="quick-save__input" placeholder="Chạm ô để sửa · nhấn + để lưu" autocomplete="one-time-code" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Liên kết cần lưu" />
+            <div class="quick-save__pill" role="group" aria-label="Dán và lưu link một lần">
+              <button type="button" id="btnHeaderPaste" class="quick-save__paste-tile" aria-label="Dán và lưu link từ clipboard">
+                <svg class="quick-save__paste-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round">
+                  <g transform="rotate(45 12 12)">
+                    <ellipse cx="10" cy="12" rx="4.15" ry="2.95" />
+                    <ellipse cx="14" cy="12" rx="4.15" ry="2.95" />
+                  </g>
+                </svg>
+              </button>
+              <input
+                type="text"
+                id="headerUrlInput"
+                class="quick-save__pill-input"
+                placeholder="Bấm icon dán để lưu nhanh từ clipboard…"
+                autocomplete="off"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+                enterkeyhint="done"
+                aria-label="URL cần lưu"
+              />
+              <button type="button" id="btnQuickAdd" class="quick-save__pill-add" title="Lưu link" aria-label="Lưu link">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+              </button>
             </div>
           </form>
-          <button type="button" id="btnQuickAdd" class="quick-save__add" title="Lưu nhanh" aria-label="Lưu link">
-            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-          </button>
+          <div id="searchInputWrap" class="quick-save__search" hidden>
+            <label class="visually-hidden" for="searchInput">Tìm kiếm</label>
+            <input type="search" id="searchInput" class="input" placeholder="Tiêu đề, ghi chú, thẻ…" autocomplete="off" />
+          </div>
+          <p class="app-build app-build--main" id="appBuildLabel" aria-live="polite">Build …</p>
         </div>
-        <div id="searchInputWrap" class="quick-save__search" hidden>
-          <label class="visually-hidden" for="searchInput">Tìm kiếm</label>
-          <input type="search" id="searchInput" class="input" placeholder="Tiêu đề, ghi chú, thẻ…" autocomplete="off" />
-        </div>
-        <p class="app-build app-build--main" id="appBuildLabel" aria-live="polite">Build …</p>
       </section>
       </div>
 
@@ -125,7 +143,7 @@
         <ul class="masonry masonry--grid" id="itemList"></ul>
         <div class="empty" id="emptyState" hidden>
           <p class="empty__title">Chưa có liên kết nào</p>
-          <p class="empty__text">Copy link → dán vào ô phía trên → nhấn <strong>+</strong> để lưu.</p>
+          <p class="empty__text">Copy link rồi bấm <strong>icon dán</strong> (mắt xích) — lưu một lần. Hoặc dán vào ô và nhấn <strong>+</strong>.</p>
         </div>
       </main>
     </div>
@@ -269,6 +287,6 @@
 
   <div class="toast" id="toast" hidden role="status"></div>
 
-  <script src="app.js?v=202605226"></script>
+  <script src="app.js?v=202605239"></script>
 </body>
 </html>

@@ -406,7 +406,8 @@ body.sidebar-open .sidebar,
 }
 
 .app-build--main {
-  margin: 0.4rem 0.75rem 0;
+  margin: 0.35rem 0 0;
+  opacity: 0.75;
 }
 
 .app-build--settings {
@@ -543,16 +544,13 @@ body.sidebar-open .sidebar,
   margin-bottom: 0;
 }
 
-.quick-save__row {
-  display: flex;
-  align-items: stretch;
-  gap: 0.45rem;
+.quick-save__wrap {
+  margin-bottom: 0.35rem;
 }
 
 .quick-save__form {
   position: relative;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
 }
 
 .quick-save__decoy {
@@ -564,92 +562,98 @@ body.sidebar-open .sidebar,
   left: -9999px;
 }
 
-.quick-save__url-wrap {
+/* Thanh dán link: [ô dán] [input] [+] — bo góc 5px */
+.quick-save__pill {
   display: flex;
-  align-items: stretch;
-  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 3.1rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.4rem;
+  border-radius: 5px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 6%, transparent);
 }
 
-.quick-save__url-wrap:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+.quick-save__pill:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent), 0 1px 3px color-mix(in srgb, var(--text) 5%, transparent);
 }
 
-.quick-save__link-btn {
+.quick-save__paste-tile {
   flex-shrink: 0;
-  align-self: stretch;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 3.25rem;
-  padding: 0 0.75rem;
+  width: 2.55rem;
+  height: 2.55rem;
+  padding: 0;
   border: none;
-  border-right: 1px solid var(--border);
-  border-radius: 0;
-  background: var(--accent-soft);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
   color: var(--accent);
-  font: inherit;
-  font-size: 0.9375rem;
-  font-weight: 600;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
-.quick-save__link-btn:active {
-  background: var(--accent);
-  color: #fff;
+.quick-save__paste-tile:active {
+  background: color-mix(in srgb, var(--accent) 28%, var(--surface));
+  transform: scale(0.96);
 }
 
-.quick-save__input {
+.quick-save__paste-svg {
+  display: block;
+  width: 1.4rem;
+  height: 1.4rem;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.quick-save__pill-input {
   flex: 1;
   min-width: 0;
   border: none;
   box-shadow: none;
   background: transparent;
-  min-height: 2.75rem;
   font-size: 16px;
   font-family: inherit;
   color: var(--text);
-  padding: 0.55rem 0.65rem;
+  padding: 0.45rem 0.15rem;
   -webkit-user-select: text;
   user-select: text;
   touch-action: manipulation;
 }
 
-.quick-save__input::placeholder {
+.quick-save__pill-input::placeholder {
   color: var(--text-muted);
 }
 
-.quick-save__input:focus {
+.quick-save__pill-input:focus {
   outline: none;
 }
 
-.quick-save__add {
+.quick-save__pill-add {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  min-width: 2.75rem;
-  align-self: stretch;
+  width: 2.65rem;
+  height: 2.65rem;
   padding: 0;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 5px;
   background: var(--accent);
   color: #fff;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 42%, transparent);
 }
 
-.quick-save__add:active {
+.quick-save__pill-add:active {
   background: var(--accent-hover);
+  transform: scale(0.95);
 }
 
 .quick-save__search {
@@ -948,6 +952,20 @@ body.is-reordering .grid-card__reorder {
   border-color: var(--pinned-border);
   background: var(--pinned-surface);
   box-shadow: var(--pinned-glow);
+}
+
+.card-li--highlight .grid-card {
+  animation: card-li-highlight-ring 0.85s ease-out 2;
+}
+
+@keyframes card-li-highlight-ring {
+  0%,
+  100% {
+    box-shadow: var(--shadow-card);
+  }
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 50%, transparent), 0 6px 20px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
 }
 
 .grid-card__media {

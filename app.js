@@ -15,6 +15,7 @@
     { id: "medium", label: "Medium" },
     { id: "spotify", label: "Spotify" },
     { id: "github", label: "Github" },
+    { id: "reddit", label: "Reddit" },
   ];
   var FORMAT_DEFS = [
     { id: "video", label: "Video" },
@@ -486,6 +487,7 @@
       if (h.includes("medium.com")) return "medium";
       if (h.includes("spotify.com") || h.includes("open.spotify.com")) return "spotify";
       if (h.includes("github.com")) return "github";
+      if (h.includes("reddit.com") || h === "redd.it") return "reddit";
       return "website";
     } catch (e) {
       return "website";
@@ -505,6 +507,7 @@
     if (source === "twitter") return "tweet";
     if (source === "spotify") return "audio";
     if (source === "medium") return "article";
+    if (source === "reddit") return path.indexOf("/comments/") !== -1 ? "article" : "website";
     if (source === "github") return "website";
     if (source === "facebook") {
       if (path.indexOf("/reel") !== -1) return "reel";
@@ -755,6 +758,7 @@
       return id ? "Video YouTube · " + id : "Video YouTube";
     }
     if (src === "facebook") return "Liên kết Facebook";
+    if (src === "reddit") return "Reddit";
     return hostnameTitle(url);
   }
 
@@ -2010,16 +2014,6 @@
     } catch (e) {}
   }
 
-  function wasLocalClipboardWriteRecent() {
-    try {
-      var t = parseInt(sessionStorage.getItem(CLIPBOARD_LOCAL_KEY), 10);
-      sessionStorage.removeItem(CLIPBOARD_LOCAL_KEY);
-      return !!(t && Date.now() - t < 120000);
-    } catch (e) {
-      return false;
-    }
-  }
-
   function isAppleTouchDevice() {
     if (typeof navigator === "undefined") return false;
     var ua = navigator.userAgent || "";
@@ -2027,15 +2021,29 @@
     return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
   }
 
-  function applyHeaderClipboardText(text) {
-    var raw = (text || "").trim();
-    if (!raw) {
+  function tryQuickSaveFromClipboardText(text) {
+    if (headerQuickAddBusy) {
+      showToast("Đang lưu…");
+      return;
+    }
+    var t = (text || "").trim();
+    if (!t) {
       showToast("Chưa có link trong clipboard");
-      return false;
+      return;
+    }
+    var raw = extractShareUrl(t, t).trim();
+    if (!raw) {
+      showToast("Clipboard không có link hợp lệ");
+      return;
+    }
+    try {
+      new URL(raw);
+    } catch (e) {
+      showToast("Clipboard không có link hợp lệ");
+      return;
     }
     setHeaderUrlValue(raw);
-    blurHeaderUrlInput();
-    return true;
+    quickAddFromHeader();
   }
 
   function tryExecCommandPaste(input) {
@@ -2073,63 +2081,74 @@
     return text;
   }
 
-  function focusHeaderUrlForNativePaste() {
+  function enableHeaderUrlEditing() {
     var input = $("headerUrlInput");
     if (!input) return;
+    input.removeAttribute("readonly");
+    input.removeAttribute("inputmode");
+  }
+
+  function prepareAppleNativePaste() {
+    var input = $("headerUrlInput");
+    if (!input) return;
+    input.setAttribute("readonly", "readonly");
+    input.setAttribute("inputmode", "none");
     input.focus({ preventScroll: true });
     try {
-      var len = (input.value || "").length;
-      if (!len) input.setSelectionRange(0, 0);
-      else input.setSelectionRange(len, len);
+      var v = (input.value || "").trim();
+      if (v.length) input.setSelectionRange(0, v.length);
+      else input.setSelectionRange(0, 0);
     } catch (e) {}
   }
 
   function pasteIntoHeaderFromClipboard() {
+    if (isAppleTouchDevice()) {
+      if (!navigator.clipboard || !navigator.clipboard.readText) {
+        prepareAppleNativePaste();
+        showToast("Không đọc clipboard — dán link vào ô rồi nhấn +");
+        return Promise.resolve();
+      }
+      blurHeaderUrlInput();
+      return navigator.clipboard
+        .readText()
+        .then(function (text) {
+          tryQuickSaveFromClipboardText(text);
+        })
+        .catch(function () {
+          prepareAppleNativePaste();
+          showToast("Cho phép clipboard để dán và lưu một lần");
+        });
+    }
+
     var input = $("headerUrlInput");
     var pasted = input ? tryExecCommandPaste(input) : "";
     if (pasted) {
-      applyHeaderClipboardText(pasted);
+      tryQuickSaveFromClipboardText(pasted);
       return Promise.resolve();
     }
 
     pasted = tryHiddenFieldPaste();
     if (pasted) {
-      applyHeaderClipboardText(pasted);
-      return Promise.resolve();
-    }
-
-    if (isAppleTouchDevice()) {
-      if (wasLocalClipboardWriteRecent() && navigator.clipboard && navigator.clipboard.readText) {
-        blurHeaderUrlInput();
-        return navigator.clipboard
-          .readText()
-          .then(function (text) {
-            applyHeaderClipboardText(text);
-          })
-          .catch(function () {
-            focusHeaderUrlForNativePaste();
-          });
-      }
-      focusHeaderUrlForNativePaste();
+      tryQuickSaveFromClipboardText(pasted);
       return Promise.resolve();
     }
 
     blurHeaderUrlInput();
 
     if (!navigator.clipboard || !navigator.clipboard.readText) {
-      focusHeaderUrlForNativePaste();
-      showToast("Không đọc được clipboard");
+      prepareAppleNativePaste();
+      showToast("Không đọc được clipboard — dán vào ô rồi nhấn +");
       return Promise.resolve();
     }
 
     return navigator.clipboard
       .readText()
       .then(function (text) {
-        applyHeaderClipboardText(text);
+        tryQuickSaveFromClipboardText(text);
       })
       .catch(function () {
-        focusHeaderUrlForNativePaste();
-        showToast("Cho phép truy cập clipboard để dán");
+        prepareAppleNativePaste();
+        showToast("Cho phép truy cập clipboard để dán và lưu");
       });
   }
 
@@ -2171,8 +2190,46 @@
       var path = window.location.pathname || "/index.html";
       if (!path.endsWith(".html") && !path.endsWith("/")) path = "/index.html";
       history.replaceState(null, "", path + (window.location.hash || ""));
-      showToast("Đã nhận link — nhấn + để lưu");
+      quickAddFromHeader();
     } catch (e) {}
+  }
+
+  function focusSavedItemByUrl(rawUrl) {
+    var target = (rawUrl || "").trim();
+    if (!target) return;
+    var item = null;
+    for (var i = 0; i < state.items.length; i++) {
+      if ((state.items[i].url || "").trim() === target) {
+        item = state.items[i];
+        break;
+      }
+    }
+    if (!item) return;
+
+    var visible = getFilteredOnly().some(function (it) {
+      return it.id === item.id;
+    });
+    if (!visible) {
+      state.search = "";
+      state.filterTag = null;
+      state.filterSource = null;
+      state.filterFormat = null;
+      var si = $("searchInput");
+      if (si) si.value = "";
+      setSearchExpanded(false);
+    }
+    render();
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(function () {
+        var li = document.querySelector('[data-item-id="' + item.id + '"]');
+        if (!li) return;
+        li.scrollIntoView({ behavior: "smooth", block: "center" });
+        li.classList.add("card-li--highlight");
+        window.setTimeout(function () {
+          li.classList.remove("card-li--highlight");
+        }, 2400);
+      });
+    });
   }
 
   function quickAddFromHeader() {
@@ -2180,7 +2237,7 @@
     var btn = $("btnQuickAdd");
     var raw = getHeaderUrlValue();
     if (!raw) {
-      showToast("Nhấn Dán hoặc dán link vào ô rồi nhấn +");
+      showToast("Chưa có link — bấm Dán hoặc nhập URL");
       return;
     }
     try {
@@ -2188,6 +2245,16 @@
     } catch (e) {
       showToast("URL không hợp lệ");
       clearHeaderUrlValue();
+      return;
+    }
+    var dup = state.items.some(function (it) {
+      return (it.url || "").trim() === raw;
+    });
+    if (dup) {
+      showToast("Đã lưu link này rồi");
+      clearHeaderUrlValue();
+      blurHeaderUrlInput();
+      focusSavedItemByUrl(raw);
       return;
     }
     headerQuickAddBusy = true;
@@ -2648,7 +2715,13 @@
     }
 
     if (headerUrlInput) {
+      if (isAppleTouchDevice()) {
+        headerUrlInput.setAttribute("readonly", "readonly");
+        headerUrlInput.setAttribute("inputmode", "none");
+      }
+
       headerUrlInput.addEventListener("touchstart", function () {
+        enableHeaderUrlEditing();
         if (document.activeElement === headerUrlInput) return;
         headerUrlInput.focus({ preventScroll: true });
         if (!(headerUrlInput.value || "").trim()) {
@@ -2660,12 +2733,14 @@
 
       headerUrlInput.addEventListener("click", function (e) {
         e.stopPropagation();
+        enableHeaderUrlEditing();
       });
 
       headerUrlInput.addEventListener("paste", function (e) {
         var text = e.clipboardData ? e.clipboardData.getData("text/plain") : "";
         if (!text) return;
         e.preventDefault();
+        enableHeaderUrlEditing();
         setHeaderUrlValue(text);
         blurHeaderUrlInput();
       });
